@@ -364,7 +364,9 @@ void os_kernel_print_top(int fd)
    ──────────────────────────────────────────────── */
 void os_watchdog_feed(void)
 {
+#if CONFIG_ESP_TASK_WDT
     esp_task_wdt_reset();
+#endif
 }
 
 void os_watchdog_enable(uint32_t timeout_ms)

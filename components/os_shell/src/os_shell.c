@@ -439,12 +439,17 @@ static void uart_shell_task(void *arg)
 
     shell_write(-1, SHELL_BANNER);
 
-    history_t hist = {0};
-    hist.nav = -1;
+    history_t *hist = calloc(1, sizeof(*hist));
+    if (!hist) {
+        OS_LOGE(TAG, "Failed to allocate shell history");
+        vTaskDelete(NULL);
+        return;
+    }
+    hist->nav = -1;
     char line[SHELL_MAX_LINE_LEN];
 
     while (1) {
-        int n = shell_readline(-1, line, sizeof(line), &hist);
+        int n = shell_readline(-1, line, sizeof(line), hist);
         if (n < 0) {
             vTaskDelay(pdMS_TO_TICKS(100));
             continue;
@@ -453,6 +458,8 @@ static void uart_shell_task(void *arg)
             shell_execute(-1, line);
         }
     }
+
+    free(hist);
 }
 
 /* ────────────────────────────────────────────────
@@ -460,8 +467,9 @@ static void uart_shell_task(void *arg)
    ──────────────────────────────────────────────── */
 #define TELNET_PORT_DEFAULT  2222
 #define TELNET_MAX_SESSIONS  3
-#define TELNET_STACK_SIZE    6144
+#define TELNET_STACK_SIZE    8192
 #define TELNET_PRIORITY      6
+#define UART_SHELL_STACK_SIZE 16384
 
 /* Credentials (change via NVS in production) */
 #define TELNET_USERNAME      "admin"
@@ -479,6 +487,15 @@ static void telnet_session_task(void *arg)
 
     OS_LOGI(TAG, "Telnet session started from %s", remote_ip);
 
+    history_t *hist = calloc(1, sizeof(*hist));
+    if (!hist) {
+        OS_LOGE(TAG, "Failed to allocate telnet history");
+        close(fd);
+        vTaskDelete(NULL);
+        return;
+    }
+    hist->nav = -1;
+
     /* Set socket timeout */
     struct timeval tv = { .tv_sec = 300, .tv_usec = 0 };
     setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
@@ -486,14 +503,13 @@ static void telnet_session_task(void *arg)
     /* Auth challenge */
     char user[48] = {0}, pass[48] = {0};
     shell_write(fd, "\r\n\033[1mesp32os login:\033[0m ");
-    history_t dummy = {0}; dummy.nav = -1;
     int n;
 
-    n = shell_readline(fd, user, sizeof(user), &dummy);
+    n = shell_readline(fd, user, sizeof(user), hist);
     if (n < 0) goto done;
 
     shell_write(fd, "Password: ");
-    n = shell_readline(fd, pass, sizeof(pass), &dummy);
+    n = shell_readline(fd, pass, sizeof(pass), hist);
     if (n < 0) goto done;
 
     if (strcmp(user, TELNET_USERNAME) != 0 || strcmp(pass, TELNET_PASSWORD) != 0) {
@@ -504,12 +520,10 @@ static void telnet_session_task(void *arg)
     OS_LOGI(TAG, "Auth OK from %s (user='%s')", remote_ip, user);
     shell_write(fd, SHELL_BANNER);
 
-    history_t hist = {0};
-    hist.nav = -1;
     char line[SHELL_MAX_LINE_LEN];
 
     while (1) {
-        n = shell_readline(fd, line, sizeof(line), &hist);
+        n = shell_readline(fd, line, sizeof(line), hist);
         if (n < 0) break;  /* disconnected */
         if (n > 0) {
             int ret = shell_execute(fd, line);
@@ -519,6 +533,7 @@ static void telnet_session_task(void *arg)
 
 done:
     OS_LOGI(TAG, "Telnet session closed (%s)", remote_ip);
+    free(hist);
     close(fd);
     vTaskDelete(NULL);
 }
@@ -590,7 +605,7 @@ esp_err_t shell_init(void)
 esp_err_t shell_start_uart(void)
 {
     BaseType_t rc = xTaskCreate(uart_shell_task, "uart_shell",
-                                8192, NULL, 5, NULL);
+                                UART_SHELL_STACK_SIZE, NULL, 5, NULL);
     return (rc == pdPASS) ? ESP_OK : ESP_ERR_NO_MEM;
 }
 

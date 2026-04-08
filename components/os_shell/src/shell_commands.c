@@ -108,7 +108,7 @@ static int cmd_free(int fd, int argc, char **argv)
     SH_PRINTF("\r\n%20s  %10s  %10s  %10s\r\n",
               "", "total", "used", "free");
     SH_PRINTF("%-20s  %10"PRIu32"  %10"PRIu32"  %10"PRIu32"\r\n",
-              "Mem:",
+              "Heap:",
               st.total_heap_bytes,
               st.total_heap_bytes - st.free_heap_bytes,
               st.free_heap_bytes);

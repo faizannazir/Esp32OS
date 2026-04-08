@@ -152,7 +152,28 @@ esp_err_t os_fs_mkdir(const char *path)
 {
     char abs[OS_FS_PATH_MAX + 16];
     os_fs_abspath(path, abs, sizeof(abs));
-    if (mkdir(abs, 0755) != 0 && errno != EEXIST) {
+    if (mkdir(abs, 0755) != 0) {
+        if (errno == EEXIST) {
+            return ESP_OK;
+        }
+
+        if (errno == ENOTSUP || errno == ENOSYS) {
+            char marker[OS_FS_PATH_MAX + 24];
+            int n = snprintf(marker, sizeof(marker), "%s/.dir", abs);
+            if (n <= 0 || (size_t)n >= sizeof(marker)) {
+                OS_LOGE(TAG, "mkdir '%s': path too long", abs);
+                return ESP_FAIL;
+            }
+
+            FILE *f = fopen(marker, "w");
+            if (!f) {
+                OS_LOGE(TAG, "mkdir fallback '%s': %s", marker, strerror(errno));
+                return ESP_FAIL;
+            }
+            fclose(f);
+            return ESP_OK;
+        }
+
         OS_LOGE(TAG, "mkdir '%s': %s", abs, strerror(errno));
         return ESP_FAIL;
     }

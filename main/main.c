@@ -104,8 +104,6 @@ static void system_monitor_task(void *arg)
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(30000));
 
-        os_watchdog_feed();
-
         kernel_stats_t st;
         os_kernel_get_stats(&st);
 
