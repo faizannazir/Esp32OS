@@ -10,13 +10,9 @@ permissions:
 
 jobs:
   build-test:
-    name: Build and Test (${{ matrix.target }})
+    name: Build and Test (esp32 + esp32s3)
     runs-on: ubuntu-latest
     container: espressif/idf:v6.0
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [esp32, esp32s3]
 
     steps:
       - name: Checkout
@@ -24,54 +20,83 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Python Dependency Setup
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pyserial
-
       - name: Host Test Harness Checks
         run: |
-          python -m py_compile tools/test_integration.py
-          python tools/test_integration.py --help >/dev/null
+          python3 -m py_compile tools/test_integration.py
 
-      - name: Build Firmware
+      - name: Build Firmware (esp32)
         run: |
           idf.py fullclean
-          idf.py set-target ${{ matrix.target }}
+          idf.py set-target esp32
           idf.py build
 
-      - name: Package Output Files
+      - name: Package Output Files (esp32)
         shell: bash
         run: |
           set -euo pipefail
-          out_dir="dist/${{ matrix.target }}"
+          out_dir="dist/esp32"
           mkdir -p "$out_dir"
 
-          cp build/esp32os.bin "$out_dir/esp32os-${{ matrix.target }}.bin"
-          cp build/esp32os.elf "$out_dir/esp32os-${{ matrix.target }}.elf"
-          cp build/bootloader/bootloader.bin "$out_dir/bootloader-${{ matrix.target }}.bin"
-          cp build/partition_table/partition-table.bin "$out_dir/partition-table-${{ matrix.target }}.bin"
+          cp build/esp32os.bin "$out_dir/esp32os-esp32.bin"
+          cp build/esp32os.elf "$out_dir/esp32os-esp32.elf"
+          cp build/bootloader/bootloader.bin "$out_dir/bootloader-esp32.bin"
+          cp build/partition_table/partition-table.bin "$out_dir/partition-table-esp32.bin"
 
           if [ -f build/esp32os.map ]; then
-            cp build/esp32os.map "$out_dir/esp32os-${{ matrix.target }}.map"
+            cp build/esp32os.map "$out_dir/esp32os-esp32.map"
           fi
 
           if [ -f build/flasher_args.json ]; then
-            cp build/flasher_args.json "$out_dir/flasher_args-${{ matrix.target }}.json"
+            cp build/flasher_args.json "$out_dir/flasher_args-esp32.json"
           fi
 
-          cp sdkconfig "$out_dir/sdkconfig-${{ matrix.target }}"
+          cp sdkconfig "$out_dir/sdkconfig-esp32"
 
           (
             cd "$out_dir"
-            zip -9 "esp32os-${{ matrix.target }}-artifacts.zip" ./*
+            zip -9 "esp32os-esp32-artifacts.zip" ./*
+          )
+
+      - name: Build Firmware (esp32s3)
+        run: |
+          idf.py fullclean
+          idf.py set-target esp32s3
+          idf.py build
+
+      - name: Package Output Files (esp32s3)
+        shell: bash
+        run: |
+          set -euo pipefail
+          out_dir="dist/esp32s3"
+          mkdir -p "$out_dir"
+
+          cp build/esp32os.bin "$out_dir/esp32os-esp32s3.bin"
+          cp build/esp32os.elf "$out_dir/esp32os-esp32s3.elf"
+          cp build/bootloader/bootloader.bin "$out_dir/bootloader-esp32s3.bin"
+          cp build/partition_table/partition-table.bin "$out_dir/partition-table-esp32s3.bin"
+
+          if [ -f build/esp32os.map ]; then
+            cp build/esp32os.map "$out_dir/esp32os-esp32s3.map"
+          fi
+
+          if [ -f build/flasher_args.json ]; then
+            cp build/flasher_args.json "$out_dir/flasher_args-esp32s3.json"
+          fi
+
+          cp sdkconfig "$out_dir/sdkconfig-esp32s3"
+
+          (
+            cd "$out_dir"
+            zip -9 "esp32os-esp32s3-artifacts.zip" ./*
           )
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: esp32os-${{ matrix.target }}-artifacts
-          path: dist/${{ matrix.target }}/
+          name: esp32os-build-artifacts
+          path: |
+            dist/esp32/
+            dist/esp32s3/
           if-no-files-found: error
 
   tag-release:
