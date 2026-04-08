@@ -1,0 +1,36 @@
+# ESP-IDF build artifacts
+build/
+sdkconfig
+sdkconfig.old
+dependencies.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env/
+venv/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Compiled objects
+*.o
+*.a
+*.elf
+*.bin
+*.map
+
+# Flash images
+flash_args
+flasher_args.json

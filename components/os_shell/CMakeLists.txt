@@ -1,0 +1,18 @@
+idf_component_register(
+    SRCS
+        "src/os_shell.c"
+        "src/shell_commands.c"
+    INCLUDE_DIRS "include"
+    REQUIRES
+        os_logging
+        os_kernel
+        os_fs
+        os_networking
+        os_drivers
+        spi_flash
+        driver
+        freertos
+        lwip
+        nvs_flash
+        esp_system
+)
