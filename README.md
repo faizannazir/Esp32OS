@@ -1,5 +1,8 @@
 # ESP32OS — Embedded Linux-Style Operating System for ESP32
 
+[![Espressif](https://img.shields.io/badge/Espressif-Systems-E7352C?logo=espressif&logoColor=white)](https://www.espressif.com/)
+[![ESP32](https://img.shields.io/badge/ESP32-Board-0A84FF?logo=espressif&logoColor=white)](https://www.espressif.com/en/products/socs/esp32)
+[![ESP-IDF](https://img.shields.io/badge/ESP--IDF-Framework-1F6FEB?logo=espressif&logoColor=white)](https://github.com/espressif/esp-idf)
 [![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v6.0-blue)](https://docs.espressif.com/projects/esp-idf)
 [![Target](https://img.shields.io/badge/Target-ESP32%20%7C%20ESP32--S3-green)](https://www.espressif.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
@@ -7,8 +10,8 @@
 [![Build System](https://img.shields.io/badge/Build-CMake-blue)](CMakeLists.txt)
 [![Scripting](https://img.shields.io/badge/Scripting-Python%203.8%2B-blue)](tools/test_integration.py)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-orange)](https://github.com/FreeRTOS/FreeRTOS-Kernel)
-[![PR Checks](https://img.shields.io/badge/PR%20Checks-GitHub%20Actions-blue)](.github/workflows/pr-checks.yml)
-[![Master Release](https://img.shields.io/badge/Master%20Release-GitHub%20Actions-blue)](.github/workflows/master-release.yml)
+
+[PR Checks - GitHub Actions](.github/workflows/pr-checks.yml) | [Master Release - GitHub Actions](.github/workflows/master-release.yml)
 
 > A high-performance, modular embedded operating system kernel for the ESP32, delivering Linux-style command-line power within a microcontroller's constraints.
 
@@ -190,6 +193,32 @@ telnet <esp32-ip> 2222
 Username: admin
 Password: esp32os
 ```
+
+### Example Terminal and UI Flow
+
+Use the terminal for build, flash, and local shell work. In VS Code, the same flow can be driven from the integrated terminal and the serial monitor.
+
+```text
+$ idf.py set-target esp32s3
+$ idf.py build
+$ idf.py -p /dev/cu.usbserial-0001 flash monitor
+
+ESP32OS Embedded OS v1.0.0
+Type 'help' for commands
+
+esp32os> uname -a
+esp32os ESP32-S3  WiFi  IDF-v6.0  2 core(s)  Flash:4MB
+
+esp32os> free
+                           total        used        free
+Heap:                     334684      116600      218084
+```
+
+The UI path is straightforward:
+
+- Use the VS Code terminal for `idf.py build` and `idf.py flash`
+- Use `idf.py monitor` or a serial terminal for shell interaction
+- Use the GitHub Actions UI to review PR Checks and Master Release runs
 
 ---
 

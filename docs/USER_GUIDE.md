@@ -53,6 +53,22 @@ You can use either the UART console or Telnet.
 
 Open `idf.py monitor` or any serial terminal at 115200 baud.
 
+Example session:
+
+```text
+esp32os> help
+esp32os> uname -a
+esp32os ESP32-S3  WiFi  IDF-v6.0  2 core(s)  Flash:4MB
+esp32os> free
+Heap:                     334684      116600      218084
+```
+
+In VS Code, the normal workflow is:
+
+1. Build from the integrated terminal with `idf.py build`
+2. Flash from the integrated terminal with `idf.py -p <port> flash`
+3. Use the serial monitor or monitor output panel for the shell UI
+
 ### Telnet
 
 1. Connect the board to WiFi from the UART shell:
@@ -81,6 +97,25 @@ Default Telnet credentials:
 - `wifi scan`, `wifi connect`, `wifi status`, `ping`, and `http` handle networking
 - `gpio`, `adc`, and `i2c scan` expose hardware controls
 - `dmesg` shows recent logs
+
+## Example Output
+
+When the device boots successfully, you should see output similar to:
+
+```text
+ESP32OS Embedded OS v1.0.0
+Type 'help' for commands
+
+esp32os> uname -a
+esp32os ESP32-S3  WiFi  IDF-v6.0  2 core(s)  Flash:4MB
+
+esp32os> ls /
+logs
+tmp
+etc
+```
+
+If you see the prompt and commands return output, the shell is working.
 
 ## Test
 
