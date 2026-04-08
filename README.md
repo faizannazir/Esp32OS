@@ -1,9 +1,14 @@
 # ESP32OS — Embedded Linux-Style Operating System for ESP32
 
-[![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v5.x-blue)](https://docs.espressif.com/projects/esp-idf)
+[![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v6.0-blue)](https://docs.espressif.com/projects/esp-idf)
 [![Target](https://img.shields.io/badge/Target-ESP32%20%7C%20ESP32--S3-green)](https://www.espressif.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 [![Language](https://img.shields.io/badge/Language-C%20(C17)-lightgrey)]()
+[![Build System](https://img.shields.io/badge/Build-CMake-blue)](CMakeLists.txt)
+[![Scripting](https://img.shields.io/badge/Scripting-Python%203.8%2B-blue)](tools/test_integration.py)
+[![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-orange)](https://github.com/FreeRTOS/FreeRTOS-Kernel)
+[![PR Checks](https://img.shields.io/github/actions/workflow/status/faizannazir/Esp32OS/pr-checks.yml?branch=master&label=PR%20Checks)](https://github.com/faizannazir/Esp32OS/actions/workflows/pr-checks.yml)
+[![Master Release](https://img.shields.io/github/actions/workflow/status/faizannazir/Esp32OS/master-release.yml?branch=master&label=Master%20Release)](https://github.com/faizannazir/Esp32OS/actions/workflows/master-release.yml)
 
 > A high-performance, modular embedded operating system kernel for the ESP32, delivering Linux-style command-line power within a microcontroller's constraints.
 
@@ -21,6 +26,40 @@ ESP32OS layers a clean OS architecture on top of FreeRTOS and ESP-IDF, giving yo
 - **Multi-level logging** — ring buffer + SPIFFS log file with rotation
 - **Watchdog integration** and graceful crash recovery
 - **Extensible command/module API** — register new commands in 5 lines
+
+---
+
+## Project Idea In Detail
+
+ESP32OS is designed to bring a practical subset of Linux-like operational experience to low-cost microcontrollers.
+
+The core idea is not to replace Linux, but to provide a familiar operational model for embedded products where Linux is too heavy in terms of boot time, RAM, flash footprint, and power budget.
+
+### Why this idea matters
+
+- Many embedded teams need shell-driven diagnostics and remote support, but cannot afford a full Linux stack.
+- Traditional firmware projects often hide system internals; ESP32OS exposes runtime state (`ps`, `top`, `free`, `dmesg`) in a clean, operator-friendly way.
+- A command-driven service architecture makes field debugging and production validation faster.
+
+### What ESP32OS tries to achieve
+
+- Provide a stable command shell over UART and Telnet for development and field maintenance.
+- Offer a modular service layer (`os_kernel`, `os_fs`, `os_networking`, `os_logging`, `os_drivers`) with clean boundaries.
+- Keep APIs simple so contributors can add drivers and commands quickly.
+- Preserve deterministic embedded behavior using FreeRTOS scheduling and ESP-IDF device support.
+
+### Intended use cases
+
+- Device bring-up labs where engineers need direct runtime visibility.
+- Education and training for RTOS + embedded networking concepts.
+- Product prototypes that need CLI-managed networking, logging, and peripheral control.
+- Factory and support tooling where scripted command execution is valuable.
+
+### Design constraints
+
+- Small memory budget and limited CPU compared with Linux-class systems.
+- Real-time responsiveness must be preserved while still offering shell convenience.
+- Hardware integration tests still require real boards even when CI is automated.
 
 ---
 
@@ -56,6 +95,19 @@ ESP32OS layers a clean OS architecture on top of FreeRTOS and ESP-IDF, giving yo
 ## Quick Start
 
 If you want a shorter operational guide, see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+
+### Fast Path (5 Minutes)
+
+```bash
+. $IDF_PATH/export.sh
+idf.py set-target esp32s3
+idf.py build
+idf.py -p /dev/ttyUSB0 flash
+python3 -m pip install pyserial
+python3 tools/test_integration.py --port /dev/ttyUSB0
+```
+
+If all tests pass, you have a working baseline.
 
 ### Prerequisites
 
@@ -97,6 +149,8 @@ Run the hardware integration script from the project root after flashing:
 python3 -m pip install pyserial
 python3 tools/test_integration.py --port /dev/ttyUSB0
 ```
+
+Expected result: `Results: 36/36 passed` (or current total in script).
 
 ### 5. Flash & Monitor
 
@@ -263,6 +317,49 @@ esp32os/
 
 ---
 
+## CI/CD
+
+The project now includes two GitHub Actions workflows:
+
+- `master-release.yml`:
+    - Trigger: push to `master`
+    - Builds: `esp32`, `esp32s3`
+    - Creates auto tag and GitHub Release
+    - Uploads release artifacts (`.bin`, `.elf`, `.map`, `.json`, `.zip`, `sdkconfig`)
+
+- `pr-checks.yml`:
+    - Trigger: pull requests targeting `master`
+    - Builds: `esp32`, `esp32s3`
+    - Runs test-harness sanity checks
+    - Uploads build artifacts for reviewer validation
+
+See [docs/TESTING.md](docs/TESTING.md) and [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for contribution workflow details.
+
+---
+
+## Open Source, Attribution, and Name Usage
+
+ESP32OS is open source under the MIT license.
+
+What this means:
+
+- You can use, modify, and distribute this code in personal and commercial projects.
+- You must retain copyright and license notices from this repository.
+
+Attribution and brand rules:
+
+- Credit must be preserved in source distributions and derivative works.
+- You may not market a fork or derivative as the official ESP32OS project.
+- Use of the `ESP32OS` project name, logo, or branding for product marketing requires prior written permission from project maintainers.
+
+For details, read:
+
+- [LICENSE](LICENSE)
+- [NOTICE.md](NOTICE.md)
+- [BRANDING_POLICY.md](BRANDING_POLICY.md)
+
+---
+
 ## Adding Custom Commands
 
 ```c
@@ -324,6 +421,70 @@ WiFi auto-connect is stored in NVS via `os_wifi_save_credentials()`.
 
 ---
 
+## Future Enhancements and Features
+
+The roadmap below highlights high-impact improvements planned for ESP32OS.
+
+### Shell and Usability
+
+- Command auto-completion (tab completion for commands and file paths)
+- Persistent shell history across reboots (NVS-backed)
+- Command aliases and simple shell variables
+- Lightweight scripting mode (`script run <file>`) for batch command execution
+
+### Kernel and Tasking
+
+- Per-task CPU usage tracking integrated into `top`
+- Better process supervision with automatic restart policies
+- Priority and affinity controls exposed through shell commands
+- Improved stack watermark diagnostics and runtime task health checks
+
+### Networking
+
+- MQTT client commands (`mqtt connect`, `pub`, `sub`)
+- HTTPS enhancements with certificate pinning support
+- mDNS/Bonjour service advertisement for zero-config discovery
+- Optional WebSocket-based remote shell gateway
+
+### Storage and File System
+
+- Stronger directory compatibility layer for SPIFFS/LittleFS parity
+- Optional LittleFS backend for improved directory semantics
+- File integrity utilities (`sha256`, `fsck-lite`, log verification)
+- Structured config files under `/etc` with validation helpers
+
+### Drivers and Hardware
+
+- PWM and servo command set
+- Expanded sensor driver templates (I2C, SPI, UART)
+- Better ADC calibration workflows and per-channel profiles
+- Power management helpers (sleep modes, wake source diagnostics)
+
+### Logging and Observability
+
+- Log export commands (serial dump, HTTP upload, compressed archive)
+- Metrics endpoint for runtime counters and health snapshots
+- Event tracing for major subsystem state transitions
+- Optional panic report summarizer from coredump metadata
+
+### Security
+
+- Role-based shell access policies (operator/admin)
+- Configurable credential storage hardening for Telnet/WiFi
+- Optional secure remote shell transport strategy
+- Safer defaults for production (`release` profile configs)
+
+### Build, Test, and Release
+
+- Hardware-in-the-loop CI on self-hosted runners
+- Automated regression suites for shell command behavior
+- Performance benchmark reporting in CI artifacts
+- Versioned changelog generation tied to release tags
+
+If you want to contribute one of these items, see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) and open an issue describing scope and acceptance criteria.
+
+---
+
 ## License
 
 MIT License — see [LICENSE](LICENSE).
@@ -339,3 +500,29 @@ MIT License — see [LICENSE](LICENSE).
 | [docs/TESTING.md](docs/TESTING.md) | Test strategy and test procedures |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Contribution guide |
 | [docs/EXTENDING.md](docs/EXTENDING.md) | How to add commands, drivers, services |
+| [NOTICE.md](NOTICE.md) | Attribution notice for reuse and distribution |
+| [BRANDING_POLICY.md](BRANDING_POLICY.md) | Rules for project name and branding usage |
+
+---
+
+## Acknowledgements and Upstream Projects
+
+ESP32OS is built on top of excellent open-source ecosystems. Thanks to the maintainers and contributors of:
+
+- Espressif Systems
+    - ESP-IDF: https://github.com/espressif/esp-idf
+    - GitHub profile: https://github.com/espressif
+
+- FreeRTOS
+    - Kernel repository: https://github.com/FreeRTOS/FreeRTOS-Kernel
+    - GitHub profile: https://github.com/FreeRTOS
+
+- LwIP TCP/IP stack
+    - Repository: https://github.com/lwip-tcpip/lwip
+    - GitHub profile: https://github.com/lwip-tcpip
+
+- Python Serial ecosystem (used by integration tooling)
+    - pyserial: https://github.com/pyserial/pyserial
+    - GitHub profile: https://github.com/pyserial
+
+ESP32OS is an independent project and is not officially affiliated with Espressif, FreeRTOS, or LwIP maintainers.

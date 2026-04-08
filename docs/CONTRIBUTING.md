@@ -2,6 +2,16 @@
 
 Thank you for your interest in contributing! This document covers everything you need to know to submit quality contributions.
 
+## Quick Contribution Flow
+
+1. Fork and create a feature branch.
+2. Build for both targets (`esp32`, `esp32s3`).
+3. Run integration tests on real hardware.
+4. Update docs if behavior or commands changed.
+5. Open a PR to `master`.
+
+CI will automatically run on your PR and publish build artifacts for review.
+
 ---
 
 ## Ground Rules
@@ -34,6 +44,14 @@ git checkout -b feature/my-cool-feature
 cd ~/esp32os
 idf.py set-target esp32
 idf.py build
+
+# 5. Validate second target
+idf.py set-target esp32s3
+idf.py build
+
+# 6. Run hardware integration test
+python3 -m pip install pyserial
+python3 tools/test_integration.py --port /dev/ttyUSB0
 ```
 
 ---
@@ -172,14 +190,21 @@ int       my_sensor_read(void);   // returns value or -1 on error
 Before opening a PR, verify:
 
 - [ ] `idf.py build` succeeds with no warnings (`-Werror` is set)
+- [ ] Build succeeds for both targets: `esp32` and `esp32s3`
 - [ ] New public functions are documented in the header
 - [ ] Existing API is not broken (no removal of public symbols)
 - [ ] Memory usage impact is documented (if significant)
 - [ ] New commands are added to the table in `README.md`
 - [ ] Relevant test cases added/updated in `docs/TESTING.md`
+- [ ] `tools/test_integration.py` passes on at least one real board
 - [ ] No magic numbers — all constants have named `#define`s
 - [ ] Static analysis: `idf.py clang-check` passes (if available)
 - [ ] Stack size is sufficient and documented for new tasks
+
+## CI Behavior
+
+- PR to `master`: `.github/workflows/pr-checks.yml` runs build and sanity checks.
+- Push to `master`: `.github/workflows/master-release.yml` builds, tags, and publishes release artifacts.
 
 ---
 

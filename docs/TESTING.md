@@ -1,5 +1,27 @@
 # ESP32OS Testing Guide
 
+This guide is optimized for contributors who want a quick, repeatable way to validate changes.
+
+## Quick Local Test Flow
+
+From the repository root:
+
+```bash
+. $IDF_PATH/export.sh
+idf.py set-target esp32s3
+idf.py build
+idf.py -p /dev/ttyUSB0 flash
+python3 -m pip install pyserial
+python3 tools/test_integration.py --port /dev/ttyUSB0 --baud 115200
+```
+
+Pass criteria:
+
+- Build completes without errors
+- Integration script reports all checks as passed
+
+If you are using a different board, change target and serial port accordingly.
+
 ---
 
 ## Testing Strategy
@@ -17,6 +39,11 @@ ESP32OS uses a three-tier test approach:
 ## Tier 1 — Unit Tests (Host Simulation)
 
 ESP-IDF includes the `unity` test framework. This repository does not currently ship host-side unit tests, so the primary automated check is the integration script in `tools/`.
+
+CI sanity checks validate the test harness itself with:
+
+- `python -m py_compile tools/test_integration.py`
+- `python tools/test_integration.py --help`
 
 ### Integration script
 
@@ -42,6 +69,16 @@ python3 tools/test_integration.py --port /dev/ttyUSB0
 ```
 
 For manual validation, the shell prompt should accept `help`, `ps`, `free`, `ls`, `wifi status`, and `dmesg` after boot.
+
+### Pre-PR Minimum Checklist
+
+Before opening a pull request, run and verify:
+
+1. `idf.py set-target esp32 && idf.py build`
+2. `idf.py set-target esp32s3 && idf.py build`
+3. `python3 tools/test_integration.py --port <your-port>` on at least one real board
+
+This matches what CI validates on PRs and what release automation validates on `master`.
 
 ---
 
@@ -155,7 +192,14 @@ esp32os> gpio read 4              # expected: 0
 
 ## CI/CD Integration
 
-For automated testing in CI pipelines, use the QEMU ESP32 emulator:
+For automated checks in this repository:
+
+- Pull requests to `master` run build + harness sanity checks via `.github/workflows/pr-checks.yml`
+- Pushes to `master` run build + release pipeline via `.github/workflows/master-release.yml`
+
+Hardware-specific tests (GPIO wiring, ADC voltage verification, WiFi environment behavior) still require real devices.
+
+If you want to add emulator-based tests later, use QEMU as an additional tier:
 
 ```yaml
 # .github/workflows/build.yml
