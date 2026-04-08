@@ -13,6 +13,8 @@ jobs:
     name: Build and Checks (esp32 + esp32s3)
     runs-on: ubuntu-latest
     container: espressif/idf:v6.0
+    env:
+      IDF_PATH: /opt/esp/idf
 
     steps:
       - name: Checkout
@@ -23,7 +25,9 @@ jobs:
           python3 -m py_compile tools/test_integration.py
 
       - name: Build Firmware (esp32)
+        shell: bash
         run: |
+          source "$IDF_PATH/export.sh"
           idf.py fullclean
           idf.py set-target esp32
           idf.py build
@@ -40,7 +44,9 @@ jobs:
           cp sdkconfig dist/esp32/sdkconfig-esp32
 
       - name: Build Firmware (esp32s3)
+        shell: bash
         run: |
+          source "$IDF_PATH/export.sh"
           idf.py fullclean
           idf.py set-target esp32s3
           idf.py build

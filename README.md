@@ -7,8 +7,8 @@
 [![Build System](https://img.shields.io/badge/Build-CMake-blue)](CMakeLists.txt)
 [![Scripting](https://img.shields.io/badge/Scripting-Python%203.8%2B-blue)](tools/test_integration.py)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-orange)](https://github.com/FreeRTOS/FreeRTOS-Kernel)
-[![PR Checks](https://img.shields.io/github/actions/workflow/status/faizannazir/Esp32OS/pr-checks.yml?branch=master&label=PR%20Checks)](https://github.com/faizannazir/Esp32OS/actions/workflows/pr-checks.yml)
-[![Master Release](https://img.shields.io/github/actions/workflow/status/faizannazir/Esp32OS/master-release.yml?branch=master&label=Master%20Release)](https://github.com/faizannazir/Esp32OS/actions/workflows/master-release.yml)
+[![PR Checks](https://img.shields.io/badge/PR%20Checks-GitHub%20Actions-blue)](.github/workflows/pr-checks.yml)
+[![Master Release](https://img.shields.io/badge/Master%20Release-GitHub%20Actions-blue)](.github/workflows/master-release.yml)
 
 > A high-performance, modular embedded operating system kernel for the ESP32, delivering Linux-style command-line power within a microcontroller's constraints.
 
