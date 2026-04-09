@@ -297,9 +297,13 @@ esp_err_t os_ping(const char *host, int count, os_ping_result_t *result)
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if (sock < 0) return ESP_FAIL;
 
+    esp_err_t ret = ESP_OK;
     struct timeval tv = { .tv_sec = PING_TIMEOUT_MS / 1000,
                           .tv_usec = (PING_TIMEOUT_MS % 1000) * 1000 };
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+        ret = ESP_FAIL;
+        goto cleanup;
+    }
 
     uint8_t packet[sizeof(struct icmp_echo_hdr) + PING_DATA_SIZE];
     struct icmp_echo_hdr *icmp_hdr = (struct icmp_echo_hdr *)packet;
@@ -340,9 +344,10 @@ esp_err_t os_ping(const char *host, int count, os_ping_result_t *result)
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
+cleanup:
     close(sock);
     if (result->min_ms == UINT32_MAX) result->min_ms = 0;
-    return ESP_OK;
+    return ret;
 }
 
 /* ────────────────────────────────────────────────

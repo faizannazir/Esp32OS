@@ -248,28 +248,34 @@ int os_process_list(process_t *buf, int max_count)
     return n;
 }
 
-const process_t *os_process_get(os_pid_t pid)
+esp_err_t os_process_get(os_pid_t pid, process_t *buf)
 {
-    if (!s_k.initialised) return NULL;
+    if (!s_k.initialised || !buf) return ESP_ERR_INVALID_ARG;
     xSemaphoreTake(s_k.lock, portMAX_DELAY);
     process_t *p = find_by_pid_locked(pid);
+    if (p) {
+        memcpy(buf, p, sizeof(process_t));
+        xSemaphoreGive(s_k.lock);
+        return ESP_OK;
+    }
     xSemaphoreGive(s_k.lock);
-    return p;
+    return ESP_ERR_NOT_FOUND;
 }
 
-const process_t *os_process_find_by_name(const char *name)
+esp_err_t os_process_find_by_name(const char *name, process_t *buf)
 {
-    if (!s_k.initialised || !name) return NULL;
+    if (!s_k.initialised || !name || !buf) return ESP_ERR_INVALID_ARG;
     xSemaphoreTake(s_k.lock, portMAX_DELAY);
     for (int i = 0; i < OS_MAX_PROCESSES; i++) {
         if (s_k.table[i].state != PROC_STATE_INVALID &&
             strncmp(s_k.table[i].name, name, OS_PROC_NAME_LEN) == 0) {
+            memcpy(buf, &s_k.table[i], sizeof(process_t));
             xSemaphoreGive(s_k.lock);
-            return &s_k.table[i];
+            return ESP_OK;
         }
     }
     xSemaphoreGive(s_k.lock);
-    return NULL;
+    return ESP_ERR_NOT_FOUND;
 }
 
 os_pid_t os_process_self(void)

@@ -479,11 +479,16 @@ typedef struct { int fd; char ip[20]; } telnet_session_arg_t;
 
 static void telnet_session_task(void *arg)
 {
-    telnet_session_arg_t *sa = arg;
-    int fd = sa->fd;
+    telnet_session_arg_t sa_local;
+    if (arg) {
+        telnet_session_arg_t *sa = arg;
+        memcpy(&sa_local, sa, sizeof(sa_local));
+        free(sa);
+    }
+    
+    int fd = sa_local.fd;
     char remote_ip[20];
-    strncpy(remote_ip, sa->ip, sizeof(remote_ip) - 1);
-    free(sa);
+    strncpy(remote_ip, sa_local.ip, sizeof(remote_ip) - 1);
 
     OS_LOGI(TAG, "Telnet session started from %s", remote_ip);
 

@@ -11,8 +11,6 @@
 [![Scripting](https://img.shields.io/badge/Scripting-Python%203.8%2B-blue)](tools/test_integration.py)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-orange)](https://github.com/FreeRTOS/FreeRTOS-Kernel)
 
-[PR Checks - GitHub Actions](.github/workflows/pr-checks.yml) | [Master Release - GitHub Actions](.github/workflows/master-release.yml)
-
 > A high-performance, modular embedded operating system kernel for the ESP32, delivering Linux-style command-line power within a microcontroller's constraints.
 
 ---
@@ -125,7 +123,7 @@ If all tests pass, you have a working baseline.
 
 ```bash
 git clone https://github.com/faizannazir/Esp32OS.git
-cd esp32os
+cd Esp32OS
 
 # Source ESP-IDF environment
 . $IDF_PATH/export.sh

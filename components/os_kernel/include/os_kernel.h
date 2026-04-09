@@ -105,9 +105,10 @@ esp_err_t  os_process_resume(os_pid_t pid);
  *  Returns actual count written.             */
 int        os_process_list(process_t *buf, int max_count);
 
-/** Find by PID or name (returns pointer into internal table, read-only use) */
-const process_t *os_process_get(os_pid_t pid);
-const process_t *os_process_find_by_name(const char *name);
+/** Find by PID or name. Copies data into caller-provided buffer.
+ *  Returns ESP_OK on success, ESP_ERR_NOT_FOUND if not found. */
+esp_err_t  os_process_get(os_pid_t pid, process_t *buf);
+esp_err_t  os_process_find_by_name(const char *name, process_t *buf);
 
 /** Get PID of the calling task (0 if unmanaged) */
 os_pid_t   os_process_self(void);
