@@ -10,6 +10,7 @@
 #include "os_logging.h"
 
 #include "driver/ledc.h"
+#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
@@ -59,6 +60,9 @@ static bool s_initialized = false;
 /** LEDC timer allocation bitmap */
 static uint8_t s_timer_usage = 0;
 
+/** LEDC timer reference counts per timer index */
+static uint8_t s_timer_refcount[LEDC_TIMER_MAX];
+
 /* ────────────────────────────────────────────────
    Private Helper Functions
    ──────────────────────────────────────────────── */
@@ -75,6 +79,7 @@ static int pwm_alloc_timer(void)
     for (int i = 0; i < LEDC_TIMER_MAX; i++) {
         if (!(s_timer_usage & (1 << i))) {
             s_timer_usage |= (1 << i);
+            s_timer_refcount[i] = 1;
             return i;
         }
     }
@@ -89,7 +94,12 @@ static int pwm_alloc_timer(void)
 static void pwm_free_timer(int timer)
 {
     if (timer >= 0 && timer < LEDC_TIMER_MAX) {
-        s_timer_usage &= ~(1 << timer);
+        if (s_timer_refcount[timer] > 0) {
+            s_timer_refcount[timer]--;
+        }
+        if (s_timer_refcount[timer] == 0) {
+            s_timer_usage &= ~(1 << timer);
+        }
     }
 }
 
@@ -126,7 +136,7 @@ static uint32_t duty_us_to_reg(uint32_t us, uint32_t freq_hz)
     }
 
     /* Scale us to duty register value */
-    return (us * PWM_MAX_DUTY_VALUE) / period_us;
+    return (uint32_t)(((uint64_t)us * PWM_MAX_DUTY_VALUE) / period_us);
 }
 
 /**
@@ -166,6 +176,7 @@ esp_err_t os_pwm_init(void)
     }
 
     s_timer_usage = 0;
+    memset(s_timer_refcount, 0, sizeof(s_timer_refcount));
     s_initialized = true;
 
     OS_LOGI(TAG, "PWM initialized, %d channels available", OS_PWM_MAX_CHANNELS);
@@ -184,6 +195,7 @@ void os_pwm_deinit(void)
     for (int i = 0; i < OS_PWM_MAX_CHANNELS; i++) {
         if (s_channels[i].active) {
             ledc_stop(PWM_SPEED_MODE, s_channels[i].ledc_ch, 0);
+            pwm_free_timer(s_channels[i].ledc_timer);
             s_channels[i].active = false;
         }
     }
@@ -219,7 +231,8 @@ esp_err_t os_pwm_channel_init(os_pwm_channel_t channel, uint8_t gpio_pin, uint32
     }
 
     /* Validate GPIO pin range (0-48 for ESP32-S3, 0-39 for ESP32) */
-    if (gpio_pin > 48) {
+    gpio_num_t gpio = (gpio_num_t)gpio_pin;
+    if (!GPIO_IS_VALID_OUTPUT_GPIO(gpio)) {
         OS_LOGE(TAG, "Invalid GPIO pin: %d", gpio_pin);
         return ESP_ERR_INVALID_ARG;
     }
@@ -231,6 +244,7 @@ esp_err_t os_pwm_channel_init(os_pwm_channel_t channel, uint8_t gpio_pin, uint32
         OS_LOGW(TAG, "Channel %d already active, deinitializing first", channel);
         ledc_stop(PWM_SPEED_MODE, s_channels[channel].ledc_ch, 0);
         pwm_free_timer(s_channels[channel].ledc_timer);
+        s_channels[channel].active = false;
     }
 
     /* Allocate a timer */
@@ -312,8 +326,8 @@ esp_err_t os_pwm_channel_deinit(os_pwm_channel_t channel)
     /* Stop PWM output and set GPIO low */
     ledc_stop(PWM_SPEED_MODE, s_channels[channel].ledc_ch, 0);
 
-    /* Free timer if no other channel uses it */
-    /* Note: Simple implementation - could track timer references */
+    /* Free timer only when no channel references it anymore */
+    pwm_free_timer(s_channels[channel].ledc_timer);
 
     s_channels[channel].active = false;
 
@@ -381,7 +395,8 @@ esp_err_t os_pwm_set_duty_us(os_pwm_channel_t channel, uint32_t duty_us)
     if (ret == ESP_OK) {
         ledc_update_duty(PWM_SPEED_MODE, s_channels[channel].ledc_ch);
         /* Recalculate percentage for tracking */
-        s_channels[channel].duty_percent = (uint32_t)duty_us * s_channels[channel].freq_hz / 10000;
+        s_channels[channel].duty_percent = (uint32_t)(((uint64_t)duty_us *
+            s_channels[channel].freq_hz) / 10000ULL);
         if (s_channels[channel].duty_percent > 100) {
             s_channels[channel].duty_percent = 100;
         }

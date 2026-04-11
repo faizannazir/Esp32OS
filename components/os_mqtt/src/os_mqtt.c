@@ -349,8 +349,8 @@ esp_err_t os_mqtt_connect(void)
         mqtt_cfg.credentials.authentication.key = s_config.client_key;
     }
 
-    /* Disable auto reconnect if requested - we handle it ourselves */
-    mqtt_cfg.network.disable_auto_reconnect = true;
+    /* Use ESP-IDF auto reconnect according to module configuration */
+    mqtt_cfg.network.disable_auto_reconnect = !s_auto_reconnect;
 
     xSemaphoreGive(s_mutex);
 

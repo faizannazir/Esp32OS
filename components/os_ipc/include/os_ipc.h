@@ -249,7 +249,7 @@ typedef struct os_shm_s *os_shm_t;
 /**
  * @brief Create a shared memory region
  *
- * Allocates statically-sized memory that can be accessed by multiple tasks.
+ * Allocates dynamically-sized memory that can be accessed by multiple tasks.
  * Memory is zero-initialized on creation.
  *
  * @param name Unique name for the region (max OS_IPC_NAME_LEN-1 chars)

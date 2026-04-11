@@ -48,6 +48,9 @@ static os_ota_state_t s_state = OS_OTA_STATE_IDLE;
 /** Download configuration */
 static os_ota_config_t s_config = {0};
 
+/** Stable storage for OTA URL while update task runs */
+static char s_url_buffer[OS_OTA_URL_MAX_LEN] = {0};
+
 /** Progress callback */
 static os_ota_progress_cb_t s_progress_cb = NULL;
 static void *s_progress_user_data = NULL;
@@ -110,6 +113,7 @@ static void set_error(const char *msg)
 static void ota_task(void *arg)
 {
     (void)arg;
+    esp_https_ota_handle_t ota_handle = NULL;
 
     OS_LOGI(TAG, "OTA task started");
 
@@ -137,7 +141,7 @@ static void ota_task(void *arg)
     };
 
     /* Start OTA */
-    esp_err_t ret = esp_https_ota_begin(&ota_config, NULL);
+    esp_err_t ret = esp_https_ota_begin(&ota_config, &ota_handle);
     if (ret != ESP_OK) {
         set_error("Failed to begin OTA");
         goto cleanup;
@@ -149,11 +153,11 @@ static void ota_task(void *arg)
     int last_progress = -1;
 
     while (1) {
-        ret = esp_https_ota_perform(NULL);
+        ret = esp_https_ota_perform(ota_handle);
 
         if (ret == ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
             /* Get current progress */
-            downloaded = esp_https_ota_get_image_len_read(NULL);
+            downloaded = esp_https_ota_get_image_len_read(ota_handle);
 
             /* Total size may be unavailable with high-level OTA API in this IDF version */
 
@@ -181,7 +185,8 @@ static void ota_task(void *arg)
             break;
         } else {
             set_error("Download failed");
-            esp_https_ota_abort(NULL);
+            esp_https_ota_abort(ota_handle);
+            ota_handle = NULL;
             goto cleanup;
         }
     }
@@ -197,7 +202,8 @@ static void ota_task(void *arg)
     }
 
     /* Finalize OTA */
-    esp_err_t ota_finish_ret = esp_https_ota_finish(NULL);
+    esp_err_t ota_finish_ret = esp_https_ota_finish(ota_handle);
+    ota_handle = NULL;
     if (ota_finish_ret != ESP_OK) {
         set_error("OTA verification failed");
         goto cleanup;
@@ -221,6 +227,9 @@ static void ota_task(void *arg)
     return;
 
 cleanup:
+    if (ota_handle != NULL) {
+        esp_https_ota_abort(ota_handle);
+    }
     s_ota_task = NULL;
     vTaskDelete(NULL);
 }
@@ -300,10 +309,9 @@ esp_err_t os_ota_start(const os_ota_config_t *config)
     /* Copy configuration */
     memset(&s_config, 0, sizeof(s_config));
     /* Store URL locally since we need to pass pointer to task */
-    static char url_buffer[OS_OTA_URL_MAX_LEN];
-    strncpy(url_buffer, config->url, sizeof(url_buffer) - 1);
-    url_buffer[sizeof(url_buffer) - 1] = '\0';
-    s_config.url = url_buffer;
+    strncpy(s_url_buffer, config->url, sizeof(s_url_buffer) - 1);
+    s_url_buffer[sizeof(s_url_buffer) - 1] = '\0';
+    s_config.url = s_url_buffer;
 
     s_config.ca_cert = config->ca_cert;
     s_config.expected_sha256 = config->expected_sha256;

@@ -50,6 +50,42 @@ extern void os_pwm_test_run_all(void);
 #define SH_PRINTF(fmt, ...)  shell_printf(fd, fmt, ##__VA_ARGS__)
 #define SH_WRITE(s)          shell_write(fd, s)
 
+static int hex_nibble(char c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+    if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+    return -1;
+}
+
+static size_t hex_to_bytes(const char *hex, uint8_t *out, size_t out_max)
+{
+    if (hex == NULL || out == NULL) {
+        return 0;
+    }
+
+    size_t len = strlen(hex);
+    if ((len % 2) != 0) {
+        return 0;
+    }
+
+    size_t byte_len = len / 2;
+    if (byte_len > out_max) {
+        return 0;
+    }
+
+    for (size_t i = 0; i < byte_len; i++) {
+        int hi = hex_nibble(hex[i * 2]);
+        int lo = hex_nibble(hex[i * 2 + 1]);
+        if (hi < 0 || lo < 0) {
+            return 0;
+        }
+        out[i] = (uint8_t)((hi << 4) | lo);
+    }
+
+    return byte_len;
+}
+
 /* ══════════════════════════════════════════════════
    SYSTEM COMMANDS
    ══════════════════════════════════════════════════ */
@@ -1050,7 +1086,8 @@ static int cmd_mqtt(int fd, int argc, char **argv)
         SH_WRITE("       mqtt connect\r\n");
         SH_WRITE("       mqtt disconnect\r\n");
         SH_WRITE("       mqtt status\r\n");
-        SH_WRITE("       mqtt pub <topic> <message> [-q QoS]\r\n");
+        SH_WRITE("       mqtt pub <topic> <message> [-q QoS]      (text payload)\r\n");
+        SH_WRITE("       mqtt pubhex <topic> <hex> [-q QoS]       (binary payload)\r\n");
         SH_WRITE("       mqtt sub <topic> [-q QoS]\r\n");
         return SHELL_CMD_ERROR;
     }
@@ -1109,6 +1146,31 @@ static int cmd_mqtt(int fd, int argc, char **argv)
         esp_err_t ret = os_mqtt_publish(argv[2], argv[3], strlen(argv[3]), qos, false);
         if (ret == ESP_OK) {
             SH_PRINTF("Published to '%s'\r\n", argv[2]);
+        } else {
+            SH_PRINTF("Publish failed: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "pubhex") == 0) {
+        if (argc < 4) {
+            SH_WRITE("Usage: mqtt pubhex <topic> <hex> [-q QoS]\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_mqtt_qos_t qos = OS_MQTT_QOS_0;
+        if (argc >= 6 && strcmp(argv[4], "-q") == 0) {
+            qos = (os_mqtt_qos_t)atoi(argv[5]);
+        }
+
+        uint8_t payload[OS_MQTT_MAX_PAYLOAD_LEN];
+        size_t payload_len = hex_to_bytes(argv[3], payload, sizeof(payload));
+        if (payload_len == 0) {
+            SH_WRITE("Invalid hex payload (must be even-length hex, max 1024 bytes)\r\n");
+            return SHELL_CMD_ERROR;
+        }
+
+        esp_err_t ret = os_mqtt_publish(argv[2], (const char *)payload, payload_len, qos, false);
+        if (ret == ESP_OK) {
+            SH_PRINTF("Published %zu-byte binary payload to '%s'\r\n", payload_len, argv[2]);
         } else {
             SH_PRINTF("Publish failed: %s\r\n", esp_err_to_name(ret));
             return SHELL_CMD_ERROR;

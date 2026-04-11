@@ -18,6 +18,7 @@
 #include "freertos/semphr.h"
 
 #include <string.h>
+#include <stdlib.h>
 
 /* ────────────────────────────────────────────────
    Module Configuration
@@ -48,7 +49,7 @@ struct os_event_s {
 /** Shared memory internal structure */
 struct os_shm_s {
     char name[OS_IPC_NAME_LEN];
-    uint8_t buffer[OS_IPC_MAX_SHM_SIZE];
+    uint8_t *buffer;
     size_t size;
     bool active;
 };
@@ -195,6 +196,9 @@ void os_ipc_deinit(void)
 
     /* Mark all shared memory as inactive */
     for (int i = 0; i < OS_IPC_MAX_SHM; i++) {
+        free(s_shm[i].buffer);
+        s_shm[i].buffer = NULL;
+        s_shm[i].size = 0;
         s_shm[i].active = false;
     }
 
@@ -557,7 +561,13 @@ os_shm_t os_shm_create(const char *name, size_t size)
         return NULL;
     }
 
-    memset(s_shm[idx].buffer, 0, size);
+    uint8_t *buf = calloc(1, size);
+    if (buf == NULL) {
+        xSemaphoreGive(s_mutex);
+        return NULL;
+    }
+
+    s_shm[idx].buffer = buf;
     s_shm[idx].size = size;
     strncpy(s_shm[idx].name, name, OS_IPC_NAME_LEN - 1);
     s_shm[idx].name[OS_IPC_NAME_LEN - 1] = '\0';
@@ -582,6 +592,9 @@ esp_err_t os_shm_delete(os_shm_t shm)
         return ESP_ERR_INVALID_ARG;
     }
 
+    free(shm->buffer);
+    shm->buffer = NULL;
+    shm->size = 0;
     shm->active = false;
 
     xSemaphoreGive(s_mutex);
