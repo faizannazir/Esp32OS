@@ -12,7 +12,11 @@
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-orange)](https://github.com/FreeRTOS/FreeRTOS-Kernel)
 
 > A high-performance, modular embedded operating system kernel for the ESP32, delivering Linux-style command-line power within a microcontroller's constraints.
-
+> 
+⚡ Esp32OS — A lightweight open-source operating system for ESP32  
+→ Build multitasking IoT apps faster  
+→ Simple APIs, modular kernel  
+→ Designed for hobbyists & embedded devs
 ---
 
 ## Overview
