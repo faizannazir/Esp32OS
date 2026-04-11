@@ -3,6 +3,7 @@ build/
 sdkconfig
 sdkconfig.old
 dependencies.lock
+managed_components/
 
 # IDE files
 .vscode/
@@ -34,3 +35,6 @@ venv/
 # Flash images
 flash_args
 flasher_args.json
+
+# Local planning documents
+FEATURE_PLAN.md

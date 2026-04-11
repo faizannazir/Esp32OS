@@ -7,6 +7,10 @@ idf_component_register(
         os_fs
         os_hal
         os_networking
+        os_pwm
+        os_ipc
+        os_mqtt
+        os_ota
         os_shell
         os_drivers
         nvs_flash

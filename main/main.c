@@ -34,6 +34,12 @@
 #include "os_networking.h"
 #include "os_shell.h"
 
+
+#include "os_pwm.h"
+#include "os_ipc.h"
+#include "os_mqtt.h"
+#include "os_ota.h"
+
 #define TAG "MAIN"
 
 /* Forward declarations */
@@ -159,10 +165,46 @@ void app_main(void)
     /* ── 5. HAL ─────────────────────────────── */
     os_hal_init();
 
+    /* ── 5a. PWM ──────────────────────────────── */
+    ret = os_pwm_init();
+    if (ret != ESP_OK) {
+        OS_LOGW(TAG, "PWM init failed");
+    } else {
+        OS_LOGI(TAG, "PWM initialized");
+    }
+
+    /* ── 5b. IPC ──────────────────────────────── */
+    ret = os_ipc_init();
+    if (ret != ESP_OK) {
+        OS_LOGW(TAG, "IPC init failed");
+    } else {
+        OS_LOGI(TAG, "IPC initialized");
+    }
+
     /* ── 6. Networking ──────────────────────── */
     ret = os_net_init();
     if (ret != ESP_OK) {
         OS_LOGW(TAG, "Network init failed — WiFi/telnet unavailable");
+    }
+
+    /* ── 6a. MQTT ─────────────────────────────── */
+    ret = os_mqtt_init();
+    if (ret != ESP_OK) {
+        OS_LOGW(TAG, "MQTT init failed");
+    } else {
+        OS_LOGI(TAG, "MQTT initialized");
+    }
+
+    /* ── 6b. OTA ──────────────────────────────── */
+    ret = os_ota_init();
+    if (ret != ESP_OK) {
+        OS_LOGW(TAG, "OTA init failed");
+    } else {
+        OS_LOGI(TAG, "OTA initialized");
+        /* Check if firmware needs confirmation */
+        if (os_ota_needs_confirmation()) {
+            OS_LOGW(TAG, "Firmware needs confirmation! Run: ota confirm");
+        }
     }
 
     /* ── 7. Watchdog ────────────────────────── */

@@ -8,6 +8,10 @@ idf_component_register(
         os_kernel
         os_fs
         os_networking
+        os_pwm
+        os_ipc
+        os_mqtt
+        os_ota
         os_drivers
         spi_flash
         driver

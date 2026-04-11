@@ -11,6 +11,12 @@
 #include "os_networking.h"
 #include "os_drivers.h"
 
+
+#include "os_pwm.h"
+#include "os_ipc.h"
+#include "os_mqtt.h"
+#include "os_ota.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -31,6 +37,12 @@
 #include "lwip/sockets.h"
 
 #define TAG "CMDS"
+
+/* Test suite entry points from component test sources */
+extern void os_mqtt_test_run_all(void);
+extern void os_ipc_test_run_all(void);
+extern void os_ota_test_run_all(void);
+extern void os_pwm_test_run_all(void);
 
 /* ────────────────────────────────────────────────
    Utility macro
@@ -724,6 +736,531 @@ static int cmd_nvs(int fd, int argc, char **argv)
 }
 
 /* ══════════════════════════════════════════════════
+   PWM COMMANDS
+   ══════════════════════════════════════════════════ */
+
+static int cmd_pwm(int fd, int argc, char **argv)
+{
+    if (argc < 2) {
+        SH_WRITE("Usage: pwm init <channel> <pin> <freq_hz>\r\n");
+        SH_WRITE("       pwm duty <channel> <percent>\r\n");
+        SH_WRITE("       pwm freq <channel> <freq_hz>\r\n");
+        SH_WRITE("       pwm deinit <channel>\r\n");
+        SH_WRITE("       pwm status\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    if (strcmp(argv[1], "init") == 0) {
+        if (argc < 5) {
+            SH_WRITE("Usage: pwm init <channel> <pin> <freq_hz>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        int channel = atoi(argv[2]);
+        int pin = atoi(argv[3]);
+        uint32_t freq = (uint32_t)atoi(argv[4]);
+
+        esp_err_t ret = os_pwm_channel_init(channel, pin, freq);
+        if (ret == ESP_OK) {
+            SH_PRINTF("PWM channel %d initialized on GPIO%d @ %lu Hz\r\n", channel, pin, freq);
+        } else {
+            SH_PRINTF("Failed to init PWM: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "duty") == 0) {
+        if (argc < 4) {
+            SH_WRITE("Usage: pwm duty <channel> <percent>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        int channel = atoi(argv[2]);
+        int duty = atoi(argv[3]);
+
+        esp_err_t ret = os_pwm_set_duty(channel, duty);
+        if (ret == ESP_OK) {
+            SH_PRINTF("PWM channel %d duty set to %d%%\r\n", channel, duty);
+        } else {
+            SH_PRINTF("Failed to set duty: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "freq") == 0) {
+        if (argc < 4) {
+            SH_WRITE("Usage: pwm freq <channel> <freq_hz>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        int channel = atoi(argv[2]);
+        uint32_t freq = (uint32_t)atoi(argv[3]);
+
+        esp_err_t ret = os_pwm_set_freq(channel, freq);
+        if (ret == ESP_OK) {
+            SH_PRINTF("PWM channel %d frequency set to %lu Hz\r\n", channel, freq);
+        } else {
+            SH_PRINTF("Failed to set frequency: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "deinit") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: pwm deinit <channel>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        int channel = atoi(argv[2]);
+
+        esp_err_t ret = os_pwm_channel_deinit(channel);
+        if (ret == ESP_OK) {
+            SH_PRINTF("PWM channel %d deinitialized\r\n", channel);
+        } else {
+            SH_PRINTF("Failed to deinit: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "status") == 0) {
+        uint8_t active = os_pwm_get_active_count();
+        SH_PRINTF("Active PWM channels: %d/%d\r\n", active, OS_PWM_MAX_CHANNELS);
+
+        for (int i = 0; i < OS_PWM_MAX_CHANNELS; i++) {
+            if (os_pwm_channel_is_active(i)) {
+                uint8_t gpio, duty;
+                uint32_t freq;
+                os_pwm_get_config(i, &gpio, &freq, &duty);
+                SH_PRINTF("  Channel %d: GPIO%d @ %lu Hz, duty=%d%%\r\n", i, gpio, freq, duty);
+            }
+        }
+    }
+    else {
+        SH_PRINTF("pwm: unknown subcommand '%s'\r\n", argv[1]);
+        return SHELL_CMD_ERROR;
+    }
+
+    return SHELL_CMD_OK;
+}
+
+/* ══════════════════════════════════════════════════
+   IPC COMMANDS
+   ══════════════════════════════════════════════════ */
+
+static int cmd_msgq(int fd, int argc, char **argv)
+{
+    if (argc < 2) {
+        SH_WRITE("Usage: msgq create <name> <size> <count>\r\n");
+        SH_WRITE("       msgq delete <name>\r\n");
+        SH_WRITE("       msgq send <name> <data>\r\n");
+        SH_WRITE("       msgq recv <name> [timeout_ms]\r\n");
+        SH_WRITE("       msgq list\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    if (strcmp(argv[1], "create") == 0) {
+        if (argc < 5) {
+            SH_WRITE("Usage: msgq create <name> <size> <count>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        size_t msg_size = (size_t)atoi(argv[3]);
+        uint8_t max_msgs = (uint8_t)atoi(argv[4]);
+
+        os_msgq_t q = os_msgq_create(argv[2], msg_size, max_msgs);
+        if (q != NULL) {
+            SH_PRINTF("Message queue '%s' created: size=%zu, count=%d\r\n", argv[2], msg_size, max_msgs);
+        } else {
+            SH_WRITE("Failed to create message queue\r\n");
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "delete") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: msgq delete <name>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_msgq_t q = os_msgq_find(argv[2]);
+        if (q == NULL) {
+            SH_PRINTF("Message queue '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+        os_msgq_delete(q);
+        SH_PRINTF("Message queue '%s' deleted\r\n", argv[2]);
+    }
+    else if (strcmp(argv[1], "send") == 0) {
+        if (argc < 4) {
+            SH_WRITE("Usage: msgq send <name> <data>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_msgq_t q = os_msgq_find(argv[2]);
+        if (q == NULL) {
+            SH_PRINTF("Message queue '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+        /* Send string data */
+        esp_err_t ret = os_msgq_send(q, argv[3], portMAX_DELAY);
+        if (ret == ESP_OK) {
+            SH_PRINTF("Sent to '%s': %s\r\n", argv[2], argv[3]);
+        } else {
+            SH_PRINTF("Send failed: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "recv") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: msgq recv <name> [timeout_ms]\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_msgq_t q = os_msgq_find(argv[2]);
+        if (q == NULL) {
+            SH_PRINTF("Message queue '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+        uint32_t timeout = (argc >= 4) ? (uint32_t)atoi(argv[3]) : 5000;
+        char buf[OS_IPC_MAX_MSG_SIZE];
+        esp_err_t ret = os_msgq_receive(q, buf, timeout);
+        if (ret == ESP_OK) {
+            SH_PRINTF("Received from '%s': %s\r\n", argv[2], buf);
+        } else if (ret == ESP_ERR_TIMEOUT) {
+            SH_WRITE("Receive timeout\r\n");
+            return SHELL_CMD_ERROR;
+        } else {
+            SH_PRINTF("Receive failed: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "list") == 0) {
+        os_msgq_list(fd);
+    }
+    else {
+        SH_PRINTF("msgq: unknown subcommand '%s'\r\n", argv[1]);
+        return SHELL_CMD_ERROR;
+    }
+
+    return SHELL_CMD_OK;
+}
+
+static int cmd_event(int fd, int argc, char **argv)
+{
+    if (argc < 2) {
+        SH_WRITE("Usage: event create <name>\r\n");
+        SH_WRITE("       event delete <name>\r\n");
+        SH_WRITE("       event set <name> <bits>\r\n");
+        SH_WRITE("       event clear <name> <bits>\r\n");
+        SH_WRITE("       event get <name>\r\n");
+        SH_WRITE("       event wait <name> <bits> [timeout_ms]\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    if (strcmp(argv[1], "create") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: event create <name>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_event_t ev = os_event_create(argv[2]);
+        if (ev != NULL) {
+            SH_PRINTF("Event group '%s' created\r\n", argv[2]);
+        } else {
+            SH_WRITE("Failed to create event group\r\n");
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "delete") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: event delete <name>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_event_t ev = os_event_find(argv[2]);
+        if (ev == NULL) {
+            SH_PRINTF("Event group '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+        os_event_delete(ev);
+        SH_PRINTF("Event group '%s' deleted\r\n", argv[2]);
+    }
+    else if (strcmp(argv[1], "set") == 0) {
+        if (argc < 4) {
+            SH_WRITE("Usage: event set <name> <bits>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_event_t ev = os_event_find(argv[2]);
+        if (ev == NULL) {
+            SH_PRINTF("Event group '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+        os_event_bits_t bits = (os_event_bits_t)strtoul(argv[3], NULL, 0);
+        os_event_set(ev, bits);
+        SH_PRINTF("Event bits 0x%08X set on '%s'\r\n", (unsigned)bits, argv[2]);
+    }
+    else if (strcmp(argv[1], "clear") == 0) {
+        if (argc < 4) {
+            SH_WRITE("Usage: event clear <name> <bits>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_event_t ev = os_event_find(argv[2]);
+        if (ev == NULL) {
+            SH_PRINTF("Event group '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+        os_event_bits_t bits = (os_event_bits_t)strtoul(argv[3], NULL, 0);
+        os_event_clear(ev, bits);
+        SH_PRINTF("Event bits 0x%08X cleared on '%s'\r\n", (unsigned)bits, argv[2]);
+    }
+    else if (strcmp(argv[1], "get") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: event get <name>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_event_t ev = os_event_find(argv[2]);
+        if (ev == NULL) {
+            SH_PRINTF("Event group '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+        os_event_bits_t bits = os_event_get(ev);
+        SH_PRINTF("Event group '%s': bits=0x%08X\r\n", argv[2], (unsigned)bits);
+    }
+    else if (strcmp(argv[1], "wait") == 0) {
+        if (argc < 4) {
+            SH_WRITE("Usage: event wait <name> <bits> [timeout_ms]\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_event_t ev = os_event_find(argv[2]);
+        if (ev == NULL) {
+            SH_PRINTF("Event group '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+        os_event_bits_t bits = (os_event_bits_t)strtoul(argv[3], NULL, 0);
+        uint32_t timeout = (argc >= 5) ? (uint32_t)atoi(argv[4]) : portMAX_DELAY;
+        os_event_bits_t result = os_event_wait(ev, bits, true, false, timeout);
+        if (result != 0) {
+            SH_PRINTF("Event wait returned: 0x%08X\r\n", (unsigned)result);
+        } else {
+            SH_WRITE("Event wait timeout\r\n");
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else {
+        SH_PRINTF("event: unknown subcommand '%s'\r\n", argv[1]);
+        return SHELL_CMD_ERROR;
+    }
+
+    return SHELL_CMD_OK;
+}
+
+/* ══════════════════════════════════════════════════
+   MQTT COMMANDS
+   ══════════════════════════════════════════════════ */
+
+static int cmd_mqtt(int fd, int argc, char **argv)
+{
+    if (argc < 2) {
+        SH_WRITE("Usage: mqtt config <broker_url>\r\n");
+        SH_WRITE("       mqtt connect\r\n");
+        SH_WRITE("       mqtt disconnect\r\n");
+        SH_WRITE("       mqtt status\r\n");
+        SH_WRITE("       mqtt pub <topic> <message> [-q QoS]\r\n");
+        SH_WRITE("       mqtt sub <topic> [-q QoS]\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    if (strcmp(argv[1], "config") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: mqtt config <broker_url>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_mqtt_config_t config = {0};
+        strncpy(config.broker_url, argv[2], sizeof(config.broker_url) - 1);
+        esp_err_t ret = os_mqtt_config(&config);
+        if (ret == ESP_OK) {
+            SH_PRINTF("MQTT configured: %s\r\n", argv[2]);
+        } else {
+            SH_PRINTF("Config failed: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "connect") == 0) {
+        esp_err_t ret = os_mqtt_connect();
+        if (ret == ESP_OK) {
+            SH_WRITE("MQTT connecting...\r\n");
+        } else {
+            SH_PRINTF("Connect failed: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "disconnect") == 0) {
+        esp_err_t ret = os_mqtt_disconnect();
+        if (ret == ESP_OK) {
+            SH_WRITE("MQTT disconnected\r\n");
+        } else {
+            SH_PRINTF("Disconnect failed: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "status") == 0) {
+        os_mqtt_state_t state = os_mqtt_get_state();
+        SH_PRINTF("MQTT state: %s\r\n", os_mqtt_get_state_str(state));
+
+        os_mqtt_stats_t stats;
+        os_mqtt_get_stats(&stats);
+        SH_PRINTF("Messages: sent=%lu, received=%lu, dropped=%lu\r\n",
+                  stats.messages_sent, stats.messages_received, stats.messages_dropped);
+    }
+    else if (strcmp(argv[1], "pub") == 0) {
+        if (argc < 4) {
+            SH_WRITE("Usage: mqtt pub <topic> <message> [-q QoS]\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_mqtt_qos_t qos = OS_MQTT_QOS_0;
+        if (argc >= 6 && strcmp(argv[4], "-q") == 0) {
+            qos = (os_mqtt_qos_t)atoi(argv[5]);
+        }
+        esp_err_t ret = os_mqtt_publish(argv[2], argv[3], strlen(argv[3]), qos, false);
+        if (ret == ESP_OK) {
+            SH_PRINTF("Published to '%s'\r\n", argv[2]);
+        } else {
+            SH_PRINTF("Publish failed: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "sub") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: mqtt sub <topic> [-q QoS]\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_mqtt_qos_t qos = OS_MQTT_QOS_0;
+        if (argc >= 5 && strcmp(argv[3], "-q") == 0) {
+            qos = (os_mqtt_qos_t)atoi(argv[4]);
+        }
+        esp_err_t ret = os_mqtt_subscribe(argv[2], qos);
+        if (ret == ESP_OK) {
+            SH_PRINTF("Subscribed to '%s'\r\n", argv[2]);
+        } else {
+            SH_PRINTF("Subscribe failed: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else {
+        SH_PRINTF("mqtt: unknown subcommand '%s'\r\n", argv[1]);
+        return SHELL_CMD_ERROR;
+    }
+
+    return SHELL_CMD_OK;
+}
+
+/* ══════════════════════════════════════════════════
+   OTA COMMANDS
+   ══════════════════════════════════════════════════ */
+
+static int cmd_ota(int fd, int argc, char **argv)
+{
+    if (argc < 2) {
+        SH_WRITE("Usage: ota update <url>\r\n");
+        SH_WRITE("       ota status\r\n");
+        SH_WRITE("       ota confirm\r\n");
+        SH_WRITE("       ota rollback\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    if (strcmp(argv[1], "update") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: ota update <url>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        if (os_ota_is_in_progress()) {
+            SH_WRITE("OTA already in progress\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        os_ota_config_t config = {
+            .url = argv[2],
+            .download_timeout_sec = 300
+        };
+        esp_err_t ret = os_ota_start(&config);
+        if (ret == ESP_OK) {
+            SH_PRINTF("OTA started from: %s\r\n", argv[2]);
+            SH_WRITE("Check status with: ota status\r\n");
+        } else {
+            SH_PRINTF("OTA start failed: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "status") == 0) {
+        os_ota_info_t info;
+        os_ota_get_info(&info);
+        SH_PRINTF("OTA State: %s (%d%%)\r\n", os_ota_get_state_str(info.state), info.progress);
+        SH_PRINTF("Running partition: %s\r\n", info.current_version);
+        SH_PRINTF("Can rollback: %s\r\n", info.can_rollback ? "yes" : "no");
+        if (os_ota_is_in_progress()) {
+            SH_PRINTF("Downloaded: %zu/%zu bytes\r\n", info.bytes_downloaded, info.total_size);
+        }
+        if (info.error_message[0] != '\0') {
+            SH_PRINTF("Last error: %s\r\n", info.error_message);
+        }
+    }
+    else if (strcmp(argv[1], "confirm") == 0) {
+        esp_err_t ret = os_ota_confirm();
+        if (ret == ESP_OK) {
+            SH_WRITE("Firmware confirmed\r\n");
+        } else {
+            SH_PRINTF("Confirm failed: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else if (strcmp(argv[1], "rollback") == 0) {
+        if (!os_ota_can_rollback()) {
+            SH_WRITE("No rollback available\r\n");
+            return SHELL_CMD_ERROR;
+        }
+        SH_WRITE("Initiating rollback...\r\n");
+        esp_err_t ret = os_ota_rollback();
+        if (ret != ESP_OK) {
+            SH_PRINTF("Rollback failed: %s\r\n", esp_err_to_name(ret));
+            return SHELL_CMD_ERROR;
+        }
+    }
+    else {
+        SH_PRINTF("ota: unknown subcommand '%s'\r\n", argv[1]);
+        return SHELL_CMD_ERROR;
+    }
+
+    return SHELL_CMD_OK;
+}
+
+/* ══════════════════════════════════════════════════
+   TEST COMMANDS
+   ══════════════════════════════════════════════════ */
+
+static int cmd_test(int fd, int argc, char **argv)
+{
+    if (argc < 2) {
+        SH_WRITE("Usage: test <mqtt|ipc|ota|pwm|all>\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    if (strcmp(argv[1], "mqtt") == 0) {
+        SH_WRITE("Running MQTT test suite...\r\n");
+        os_mqtt_test_run_all();
+    }
+    else if (strcmp(argv[1], "ipc") == 0) {
+        SH_WRITE("Running IPC test suite...\r\n");
+        os_ipc_test_run_all();
+    }
+    else if (strcmp(argv[1], "ota") == 0) {
+        SH_WRITE("Running OTA test suite...\r\n");
+        os_ota_test_run_all();
+    }
+    else if (strcmp(argv[1], "pwm") == 0) {
+        SH_WRITE("Running PWM test suite...\r\n");
+        os_pwm_test_run_all();
+    }
+    else if (strcmp(argv[1], "all") == 0) {
+        SH_WRITE("Running all feature test suites (MQTT, IPC, OTA, PWM)...\r\n");
+        os_mqtt_test_run_all();
+        os_ipc_test_run_all();
+        os_ota_test_run_all();
+        os_pwm_test_run_all();
+    }
+    else {
+        SH_PRINTF("test: unknown suite '%s'\r\n", argv[1]);
+        return SHELL_CMD_ERROR;
+    }
+
+    SH_WRITE("Test suite execution complete.\r\n");
+    return SHELL_CMD_OK;
+}
+
+/* ══════════════════════════════════════════════════
    Command Registration
    ══════════════════════════════════════════════════ */
 void shell_commands_register_all(void)
@@ -771,6 +1308,16 @@ void shell_commands_register_all(void)
         {"gpio",      "GPIO read/write/mode control",                       "gpio <read|write|mode|info>", cmd_gpio},
         {"adc",       "ADC channel read",                                   "adc <read|readv|readall> [ch]", cmd_adc},
         {"i2c",       "I2C scan and communicate",                           "i2c <scan|read|write>",     cmd_i2c},
+        {"pwm",       "PWM control for motors/LEDs",                          "pwm <init|duty|freq|deinit|status>", cmd_pwm},
+        /* IPC */
+        {"msgq",      "Message queue operations",                            "msgq <create|delete|send|recv|list>", cmd_msgq},
+        {"event",     "Event group operations",                              "event <create|delete|set|clear|get|wait>", cmd_event},
+        /* MQTT */
+        {"mqtt",      "MQTT client operations",                              "mqtt <config|connect|disconnect|status|pub|sub>", cmd_mqtt},
+        /* OTA */
+        {"ota",       "OTA firmware update",                                 "ota <update|status|confirm|rollback>", cmd_ota},
+        /* Tests */
+        {"test",      "Run feature test suites",                              "test <mqtt|ipc|ota|pwm|all>", cmd_test},
         /* NVS */
         {"nvs",       "Non-volatile storage key/value",                     "nvs <get|set|del|erase>",   cmd_nvs},
     };
