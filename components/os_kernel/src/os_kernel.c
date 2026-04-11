@@ -254,6 +254,7 @@ esp_err_t os_process_get(os_pid_t pid, process_t *buf)
     xSemaphoreTake(s_k.lock, portMAX_DELAY);
     process_t *p = find_by_pid_locked(pid);
     if (p) {
+        // Thread-safe: Copy data while holding lock to prevent use-after-free
         memcpy(buf, p, sizeof(process_t));
         xSemaphoreGive(s_k.lock);
         return ESP_OK;
@@ -269,6 +270,7 @@ esp_err_t os_process_find_by_name(const char *name, process_t *buf)
     for (int i = 0; i < OS_MAX_PROCESSES; i++) {
         if (s_k.table[i].state != PROC_STATE_INVALID &&
             strncmp(s_k.table[i].name, name, OS_PROC_NAME_LEN) == 0) {
+            // Thread-safe: Copy data while holding lock to prevent use-after-free
             memcpy(buf, &s_k.table[i], sizeof(process_t));
             xSemaphoreGive(s_k.lock);
             return ESP_OK;
