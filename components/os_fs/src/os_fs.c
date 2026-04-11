@@ -286,6 +286,11 @@ esp_err_t os_fs_read_file(const char *path, char *buf, size_t buf_sz, size_t *re
         return ESP_ERR_NOT_FOUND;
     }
     size_t n = fread(buf, 1, buf_sz - 1, f);
+    if (ferror(f)) {
+        OS_LOGE(TAG, "Read error on '%s': %s", abs, strerror(errno));
+        fclose(f);
+        return ESP_FAIL;
+    }
     buf[n] = '\0';
     if (read_sz) *read_sz = n;
     fclose(f);
@@ -302,7 +307,12 @@ esp_err_t os_fs_write_file(const char *path, const char *data, size_t len, bool 
         OS_LOGE(TAG, "Cannot write '%s': %s", abs, strerror(errno));
         return ESP_FAIL;
     }
-    fwrite(data, 1, len, f);
+    size_t written = fwrite(data, 1, len, f);
+    if (written != len || ferror(f)) {
+        OS_LOGE(TAG, "Write error on '%s': wrote %zu of %zu bytes", abs, written, len);
+        fclose(f);
+        return ESP_FAIL;
+    }
     fclose(f);
     return ESP_OK;
 }
