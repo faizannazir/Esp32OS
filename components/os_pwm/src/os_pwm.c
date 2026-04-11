@@ -395,8 +395,8 @@ esp_err_t os_pwm_set_duty_us(os_pwm_channel_t channel, uint32_t duty_us)
     if (ret == ESP_OK) {
         ledc_update_duty(PWM_SPEED_MODE, s_channels[channel].ledc_ch);
         /* Recalculate percentage for tracking */
-        s_channels[channel].duty_percent = (uint32_t)(((uint64_t)duty_us *
-            s_channels[channel].freq_hz) / 10000ULL);
+        s_channels[channel].duty_percent = (uint32_t)((((uint64_t)duty_us *
+            100ULL) * s_channels[channel].freq_hz) / 1000000ULL);
         if (s_channels[channel].duty_percent > 100) {
             s_channels[channel].duty_percent = 100;
         }

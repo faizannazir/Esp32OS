@@ -1164,7 +1164,7 @@ static int cmd_mqtt(int fd, int argc, char **argv)
         uint8_t payload[OS_MQTT_MAX_PAYLOAD_LEN];
         size_t payload_len = hex_to_bytes(argv[3], payload, sizeof(payload));
         if (payload_len == 0) {
-            SH_WRITE("Invalid hex payload (must be even-length hex, max 1024 bytes)\r\n");
+            SH_WRITE("Invalid hex payload (must be even-length hex, max 2048 hex characters (1024 bytes binary))\r\n");
             return SHELL_CMD_ERROR;
         }
 

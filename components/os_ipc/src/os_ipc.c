@@ -178,6 +178,9 @@ void os_ipc_deinit(void)
 
     xSemaphoreTake(s_mutex, portMAX_DELAY);
 
+    /* Block new API use while teardown is in progress */
+    s_initialized = false;
+
     /* Delete all queues */
     for (int i = 0; i < OS_IPC_MAX_QUEUES; i++) {
         if (s_queues[i].active && s_queues[i].handle != NULL) {
@@ -206,7 +209,6 @@ void os_ipc_deinit(void)
 
     vSemaphoreDelete(s_mutex);
     s_mutex = NULL;
-    s_initialized = false;
 
     OS_LOGI(TAG, "IPC deinitialized");
 }
@@ -605,20 +607,28 @@ esp_err_t os_shm_delete(os_shm_t shm)
 
 void *os_shm_get_ptr(os_shm_t shm)
 {
-    if (!is_valid_shm(shm)) {
+    if (!s_initialized || s_mutex == NULL) {
         return NULL;
     }
 
-    return shm->buffer;
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+    void *ptr = is_valid_shm(shm) ? shm->buffer : NULL;
+    xSemaphoreGive(s_mutex);
+
+    return ptr;
 }
 
 size_t os_shm_get_size(os_shm_t shm)
 {
-    if (!is_valid_shm(shm)) {
+    if (!s_initialized || s_mutex == NULL) {
         return 0;
     }
 
-    return shm->size;
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+    size_t size = is_valid_shm(shm) ? shm->size : 0;
+    xSemaphoreGive(s_mutex);
+
+    return size;
 }
 
 os_shm_t os_shm_find(const char *name)

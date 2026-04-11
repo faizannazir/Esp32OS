@@ -135,6 +135,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
 
     esp_mqtt_event_handle_t event = event_data;
     os_mqtt_event_t os_event = {0};
+    os_mqtt_callback_t cb = NULL;
+    void *cb_user_data = NULL;
 
     xSemaphoreTake(s_mutex, portMAX_DELAY);
 
@@ -200,11 +202,15 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
             break;
     }
 
-    /* Call user callback if registered */
-    if (s_config.callback != NULL && os_event.event_type != 0) {
-        /* Release mutex before calling callback to prevent deadlock */
+    /* Snapshot callback under lock, then invoke without lock to avoid deadlocks/races */
+    if (os_event.event_type != 0) {
+        cb = s_config.callback;
+        cb_user_data = s_config.user_data;
+    }
+
+    if (cb != NULL) {
         xSemaphoreGive(s_mutex);
-        s_config.callback(&os_event, s_config.user_data);
+        cb(&os_event, cb_user_data);
         xSemaphoreTake(s_mutex, portMAX_DELAY);
     }
 

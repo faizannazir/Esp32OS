@@ -72,6 +72,9 @@ static SemaphoreHandle_t s_mutex = NULL;
 /** Module initialized flag */
 static bool s_initialized = false;
 
+/** Cooperative cancel request for OTA task */
+static bool s_abort_requested = false;
+
 /* ────────────────────────────────────────────────
    Private Helper Functions
    ──────────────────────────────────────────────── */
@@ -106,6 +109,18 @@ static void set_error(const char *msg)
 }
 
 /**
+ * @brief Check whether OTA cancellation has been requested
+ */
+static bool is_abort_requested(void)
+{
+    bool abort_requested;
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+    abort_requested = s_abort_requested;
+    xSemaphoreGive(s_mutex);
+    return abort_requested;
+}
+
+/**
  * @brief OTA background task
  *
  * Handles download, verification, and application.
@@ -116,6 +131,11 @@ static void ota_task(void *arg)
     esp_https_ota_handle_t ota_handle = NULL;
 
     OS_LOGI(TAG, "OTA task started");
+
+    if (is_abort_requested()) {
+        update_state(OS_OTA_STATE_IDLE, 0);
+        goto cleanup;
+    }
 
     update_state(OS_OTA_STATE_DOWNLOADING, 0);
 
@@ -153,6 +173,19 @@ static void ota_task(void *arg)
     int last_progress = -1;
 
     while (1) {
+        if (is_abort_requested()) {
+            OS_LOGW(TAG, "OTA cancellation requested, aborting operation");
+            if (ota_handle != NULL) {
+                esp_https_ota_abort(ota_handle);
+                ota_handle = NULL;
+            }
+            xSemaphoreTake(s_mutex, portMAX_DELAY);
+            s_error_message[0] = '\0';
+            xSemaphoreGive(s_mutex);
+            update_state(OS_OTA_STATE_IDLE, 0);
+            goto cleanup;
+        }
+
         ret = esp_https_ota_perform(ota_handle);
 
         if (ret == ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
@@ -230,7 +263,10 @@ cleanup:
     if (ota_handle != NULL) {
         esp_https_ota_abort(ota_handle);
     }
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+    s_abort_requested = false;
     s_ota_task = NULL;
+    xSemaphoreGive(s_mutex);
     vTaskDelete(NULL);
 }
 
@@ -321,6 +357,7 @@ esp_err_t os_ota_start(const os_ota_config_t *config)
     s_error_message[0] = '\0';
     s_bytes_downloaded = 0;
     s_total_size = 0;
+    s_abort_requested = false;
 
     xSemaphoreGive(s_mutex);
 
@@ -538,11 +575,30 @@ void os_ota_abort(void)
         return;
     }
 
-    /* Signal task to abort - simplified: just delete task */
-    vTaskDelete(s_ota_task);
-    s_ota_task = NULL;
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+    s_abort_requested = true;
+    xSemaphoreGive(s_mutex);
+
+    /* Let OTA task cooperatively stop and clean up its handle/resources */
+    bool stopped = false;
+    for (int i = 0; i < 50; i++) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+        xSemaphoreTake(s_mutex, portMAX_DELAY);
+        stopped = (s_ota_task == NULL);
+        xSemaphoreGive(s_mutex);
+        if (stopped) {
+            break;
+        }
+    }
+
+    if (!stopped) {
+        OS_LOGW(TAG, "OTA task did not stop cooperatively, forcing delete");
+        vTaskDelete(s_ota_task);
+        s_ota_task = NULL;
+    }
 
     xSemaphoreTake(s_mutex, portMAX_DELAY);
+    s_abort_requested = false;
     s_state = OS_OTA_STATE_IDLE;
     s_progress = 0;
     xSemaphoreGive(s_mutex);

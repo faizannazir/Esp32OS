@@ -185,6 +185,8 @@ void app_main(void)
     ret = os_net_init();
     if (ret != ESP_OK) {
         OS_LOGW(TAG, "Network init failed — WiFi/telnet unavailable");
+        OS_LOGW(TAG, "Skipping MQTT init due to network initialization failure");
+        OS_LOGW(TAG, "Skipping OTA init due to network initialization failure");
     } else {
         /* ── 6a. MQTT ─────────────────────────────── */
         ret = os_mqtt_init();
