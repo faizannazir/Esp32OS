@@ -24,6 +24,7 @@ ESP32OS layers a clean OS architecture on top of FreeRTOS and ESP-IDF, giving yo
 - **SPIFFS file system** — `ls`, `cd`, `cat`, `write`, `rm`, `mkdir`, `df`
 - **Networking** — WiFi scan/connect, ping, HTTP GET, auto-reconnect
 - **Hardware control** — GPIO, ADC, I2C scan, SPI via CLI commands
+- **Feature modules** — PWM, IPC (message queues/events/shared memory), MQTT, OTA
 - **Multi-level logging** — ring buffer + SPIFFS log file with rotation
 - **Watchdog integration** and graceful crash recovery
 - **Extensible command/module API** — register new commands in 5 lines
@@ -151,7 +152,7 @@ python3 -m pip install pyserial
 python3 tools/test_integration.py --port /dev/ttyUSB0
 ```
 
-Expected result: `Results: 36/36 passed` (or current total in script).
+Expected result: all checks pass (count may change as the script evolves).
 
 ### 5. Flash & Monitor
 
@@ -296,6 +297,38 @@ The UI path is straightforward:
 | `nvs set <key> <val>` | Write NVS value | `nvs set hostname esp32` |
 | `nvs del <key>` | Delete NVS key | `nvs del hostname` |
 | `nvs erase` | Erase all NVS | `nvs erase` |
+
+### Feature Modules
+| Command | Description | Example |
+|---------|-------------|---------|
+| `pwm init <channel> <pin> <freq_hz>` | Initialize PWM channel | `pwm init 0 2 5000` |
+| `pwm duty <channel> <percent>` | Set PWM duty in percent | `pwm duty 0 25` |
+| `pwm freq <channel> <freq_hz>` | Change PWM frequency | `pwm freq 0 1000` |
+| `pwm deinit <channel>` | Deinitialize PWM channel | `pwm deinit 0` |
+| `msgq create <name> <size> <count>` | Create IPC message queue | `msgq create q1 16 8` |
+| `msgq send <name> <data>` | Send text payload to queue | `msgq send q1 hello` |
+| `msgq recv <name> [timeout_ms]` | Receive queue payload | `msgq recv q1 1000` |
+| `event create <name>` | Create event group | `event create ev1` |
+| `event set <name> <bits>` | Set event bits | `event set ev1 0x03` |
+| `event wait <name> <bits> [timeout_ms]` | Wait for event bits | `event wait ev1 0x01 5000` |
+| `mqtt config <broker_url>` | Set MQTT broker URL | `mqtt config mqtt://broker.hivemq.com` |
+| `mqtt connect` | Connect MQTT client | `mqtt connect` |
+| `mqtt pub <topic> <message> [-q QoS]` | Publish text payload | `mqtt pub dev/status online -q 1` |
+| `mqtt pubhex <topic> <hex> [-q QoS]` | Publish binary payload from hex | `mqtt pubhex dev/raw DEADBEEF -q 0` |
+| `mqtt sub <topic> [-q QoS]` | Subscribe to topic | `mqtt sub dev/status -q 1` |
+| `ota update <url>` | Start OTA firmware update | `ota update https://example.com/fw.bin` |
+| `ota status` | Show OTA state and progress | `ota status` |
+| `ota confirm` | Confirm updated firmware | `ota confirm` |
+| `ota rollback` | Roll back to previous firmware | `ota rollback` |
+
+### Test Suites
+| Command | Description | Example |
+|---------|-------------|---------|
+| `test mqtt` | Run MQTT component tests | `test mqtt` |
+| `test ipc` | Run IPC component tests | `test ipc` |
+| `test ota` | Run OTA component tests | `test ota` |
+| `test pwm` | Run PWM component tests | `test pwm` |
+| `test all` | Run all feature test suites | `test all` |
 
 ---
 

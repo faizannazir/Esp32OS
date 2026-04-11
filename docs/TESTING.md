@@ -70,6 +70,33 @@ python3 tools/test_integration.py --port /dev/ttyUSB0
 
 For manual validation, the shell prompt should accept `help`, `ps`, `free`, `ls`, `wifi status`, and `dmesg` after boot.
 
+### Feature Suite Commands
+
+The shell exposes built-in component test runners:
+
+```text
+esp32os> test mqtt
+esp32os> test ipc
+esp32os> test ota
+esp32os> test pwm
+esp32os> test all
+```
+
+Use `test all` as a quick regression pass after changes in `os_mqtt`, `os_ipc`, `os_ota`, or `os_pwm`.
+
+### MQTT Payload Validation
+
+Validate both text and binary publish paths:
+
+```text
+esp32os> mqtt config mqtt://broker.hivemq.com
+esp32os> mqtt connect
+esp32os> mqtt pub dev/status online -q 1
+esp32os> mqtt pubhex dev/raw DEADBEEF -q 0
+```
+
+`mqtt pub` is text-oriented; `mqtt pubhex` is the binary-safe path for payloads with embedded null bytes.
+
 ### Pre-PR Minimum Checklist
 
 Before opening a pull request, run and verify:

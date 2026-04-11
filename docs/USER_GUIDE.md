@@ -98,6 +98,34 @@ Default Telnet credentials:
 - `gpio`, `adc`, and `i2c scan` expose hardware controls
 - `dmesg` shows recent logs
 
+Feature module commands:
+
+- `pwm` controls PWM channels (`init`, `duty`, `freq`, `deinit`, `status`)
+- `msgq` manages message queues (`create`, `delete`, `send`, `recv`, `list`)
+- `event` manages event groups (`create`, `delete`, `set`, `clear`, `get`, `wait`)
+- `mqtt` manages broker connectivity and publish/subscribe flow
+- `ota` manages firmware updates (`update`, `status`, `confirm`, `rollback`)
+
+## Feature Module Quickstart
+
+Example session:
+
+```text
+esp32os> pwm init 0 2 5000
+esp32os> pwm duty 0 20
+
+esp32os> msgq create q1 16 4
+esp32os> msgq send q1 hello
+esp32os> msgq recv q1 1000
+
+esp32os> mqtt config mqtt://broker.hivemq.com
+esp32os> mqtt connect
+esp32os> mqtt pub dev/status online -q 1
+esp32os> mqtt pubhex dev/raw DEADBEEF
+
+esp32os> ota status
+```
+
 ## Example Output
 
 When the device boots successfully, you should see output similar to:
@@ -127,6 +155,16 @@ python3 tools/test_integration.py --port /dev/ttyUSB0 --baud 115200
 ```
 
 The script checks common shell, filesystem, logging, GPIO, ADC, and NVS commands.
+
+You can also run feature component suites directly from the shell:
+
+```text
+esp32os> test mqtt
+esp32os> test ipc
+esp32os> test ota
+esp32os> test pwm
+esp32os> test all
+```
 
 ## Troubleshooting
 
