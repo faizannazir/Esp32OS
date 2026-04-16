@@ -13,6 +13,7 @@
 
 
 #include "os_pwm.h"
+#include "os_timer.h"
 #include "os_ipc.h"
 #include "os_mqtt.h"
 #include "os_ota.h"
@@ -43,6 +44,7 @@ extern void os_mqtt_test_run_all(void);
 extern void os_ipc_test_run_all(void);
 extern void os_ota_test_run_all(void);
 extern void os_pwm_test_run_all(void);
+extern void os_timer_test_run_all(void);
 
 /* ────────────────────────────────────────────────
    Utility macro
@@ -872,6 +874,144 @@ static int cmd_pwm(int fd, int argc, char **argv)
 }
 
 /* ══════════════════════════════════════════════════
+   TIMER COMMANDS
+   ══════════════════════════════════════════════════ */
+
+static int cmd_timer(int fd, int argc, char **argv)
+{
+    if (argc < 2) {
+        SH_WRITE("Usage: timer create <name> <period_ms> <reload>\r\n");
+        SH_WRITE("       timer start <name>\r\n");
+        SH_WRITE("       timer stop <name>\r\n");
+        SH_WRITE("       timer restart <name> <period_ms>\r\n");
+        SH_WRITE("       timer delete <name>\r\n");
+        SH_WRITE("       timer list\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    if (strcmp(argv[1], "create") == 0) {
+        if (argc < 5) {
+            SH_WRITE("Usage: timer create <name> <period_ms> <reload>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+
+        os_timer_config_t cfg = {
+            .name = argv[2],
+            .period_ms = (uint32_t)atoi(argv[3]),
+            .reload = (strcmp(argv[4], "1") == 0 || strcmp(argv[4], "true") == 0 ||
+                       strcmp(argv[4], "yes") == 0 || strcmp(argv[4], "on") == 0),
+            .callback = NULL,
+            .arg = NULL,
+        };
+
+        os_timer_t timer = os_timer_create(&cfg);
+        if (!timer) {
+            SH_WRITE("timer: create failed\r\n");
+            return SHELL_CMD_ERROR;
+        }
+
+        SH_PRINTF("Timer '%s' created (%" PRIu32 " ms, %s)\r\n",
+                  os_timer_get_name(timer),
+                  cfg.period_ms,
+                  cfg.reload ? "auto" : "oneshot");
+        return SHELL_CMD_OK;
+    }
+
+    if (strcmp(argv[1], "start") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: timer start <name>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+
+        os_timer_t timer = os_timer_find(argv[2]);
+        if (!timer) {
+            SH_PRINTF("timer: '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+
+        if (os_timer_start(timer) != ESP_OK) {
+            SH_PRINTF("timer: start failed for '%s'\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+
+        SH_PRINTF("Timer '%s' started\r\n", argv[2]);
+        return SHELL_CMD_OK;
+    }
+
+    if (strcmp(argv[1], "stop") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: timer stop <name>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+
+        os_timer_t timer = os_timer_find(argv[2]);
+        if (!timer) {
+            SH_PRINTF("timer: '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+
+        if (os_timer_stop(timer) != ESP_OK) {
+            SH_PRINTF("timer: stop failed for '%s'\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+
+        SH_PRINTF("Timer '%s' stopped\r\n", argv[2]);
+        return SHELL_CMD_OK;
+    }
+
+    if (strcmp(argv[1], "restart") == 0) {
+        if (argc < 4) {
+            SH_WRITE("Usage: timer restart <name> <period_ms>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+
+        os_timer_t timer = os_timer_find(argv[2]);
+        if (!timer) {
+            SH_PRINTF("timer: '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+
+        uint32_t period_ms = (uint32_t)atoi(argv[3]);
+        if (os_timer_restart(timer, period_ms) != ESP_OK) {
+            SH_PRINTF("timer: restart failed for '%s'\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+
+        SH_PRINTF("Timer '%s' restarted at %" PRIu32 " ms\r\n", argv[2], period_ms);
+        return SHELL_CMD_OK;
+    }
+
+    if (strcmp(argv[1], "delete") == 0) {
+        if (argc < 3) {
+            SH_WRITE("Usage: timer delete <name>\r\n");
+            return SHELL_CMD_ERROR;
+        }
+
+        os_timer_t timer = os_timer_find(argv[2]);
+        if (!timer) {
+            SH_PRINTF("timer: '%s' not found\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+
+        if (os_timer_delete(timer) != ESP_OK) {
+            SH_PRINTF("timer: delete failed for '%s'\r\n", argv[2]);
+            return SHELL_CMD_ERROR;
+        }
+
+        SH_PRINTF("Timer '%s' deleted\r\n", argv[2]);
+        return SHELL_CMD_OK;
+    }
+
+    if (strcmp(argv[1], "list") == 0) {
+        os_timer_list(fd);
+        return SHELL_CMD_OK;
+    }
+
+    SH_PRINTF("timer: unknown subcommand '%s'\r\n", argv[1]);
+    return SHELL_CMD_ERROR;
+}
+
+/* ══════════════════════════════════════════════════
    IPC COMMANDS
    ══════════════════════════════════════════════════ */
 
@@ -1286,7 +1426,7 @@ static int cmd_ota(int fd, int argc, char **argv)
 static int cmd_test(int fd, int argc, char **argv)
 {
     if (argc < 2) {
-        SH_WRITE("Usage: test <mqtt|ipc|ota|pwm|all>\r\n");
+        SH_WRITE("Usage: test <mqtt|ipc|ota|pwm|timer|all>\r\n");
         return SHELL_CMD_ERROR;
     }
 
@@ -1306,12 +1446,17 @@ static int cmd_test(int fd, int argc, char **argv)
         SH_WRITE("Running PWM test suite...\r\n");
         os_pwm_test_run_all();
     }
+    else if (strcmp(argv[1], "timer") == 0) {
+        SH_WRITE("Running TIMER test suite...\r\n");
+        os_timer_test_run_all();
+    }
     else if (strcmp(argv[1], "all") == 0) {
-        SH_WRITE("Running all feature test suites (MQTT, IPC, OTA, PWM)...\r\n");
+        SH_WRITE("Running all feature test suites (MQTT, IPC, OTA, PWM, TIMER)...\r\n");
         os_mqtt_test_run_all();
         os_ipc_test_run_all();
         os_ota_test_run_all();
         os_pwm_test_run_all();
+        os_timer_test_run_all();
     }
     else {
         SH_PRINTF("test: unknown suite '%s'\r\n", argv[1]);
@@ -1371,6 +1516,7 @@ void shell_commands_register_all(void)
         {"adc",       "ADC channel read",                                   "adc <read|readv|readall> [ch]", cmd_adc},
         {"i2c",       "I2C scan and communicate",                           "i2c <scan|read|write>",     cmd_i2c},
         {"pwm",       "PWM control for motors/LEDs",                          "pwm <init|duty|freq|deinit|status>", cmd_pwm},
+        {"timer",     "Software timer control",                              "timer <create|start|stop|restart|delete|list>", cmd_timer},
         /* IPC */
         {"msgq",      "Message queue operations",                            "msgq <create|delete|send|recv|list>", cmd_msgq},
         {"event",     "Event group operations",                              "event <create|delete|set|clear|get|wait>", cmd_event},
