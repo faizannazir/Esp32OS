@@ -25,6 +25,8 @@ jobs:
       - name: Host Test Harness Checks
         run: |
           python3 -m py_compile tools/test_integration.py
+          python3 -m py_compile tools/test_shell_host_integration.py
+          python3 tools/test_shell_host_integration.py
 
       - name: Build Firmware (esp32)
         shell: bash

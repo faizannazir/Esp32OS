@@ -28,7 +28,7 @@ ESP32OS layers a clean OS architecture on top of FreeRTOS and ESP-IDF, giving yo
 - **SPIFFS file system** — `ls`, `cd`, `cat`, `write`, `rm`, `mkdir`, `df`
 - **Networking** — WiFi scan/connect, ping, HTTP GET, auto-reconnect
 - **Hardware control** — GPIO, ADC, I2C scan, SPI via CLI commands
-- **Feature modules** — PWM, IPC (message queues/events/shared memory), MQTT, OTA
+- **Feature modules** — PWM, timer, IPC (message queues/events/shared memory), MQTT, OTA, environment variables, background/scheduled command execution
 - **Multi-level logging** — ring buffer + SPIFFS log file with rotation
 - **Watchdog integration** and graceful crash recovery
 - **Extensible command/module API** — register new commands in 5 lines
@@ -153,10 +153,13 @@ Run the hardware integration script from the project root after flashing:
 
 ```bash
 python3 -m pip install pyserial
+python3 tools/test_shell_host_integration.py
 python3 tools/test_integration.py --port /dev/ttyUSB0
 ```
 
 Expected result: all checks pass (count may change as the script evolves).
+
+`test_shell_host_integration.py` runs offline command workflow checks for `env/export/unset/printenv/run/at/every/jobs/killjob` and does not require an attached board.
 
 ### 5. Flash & Monitor
 
@@ -302,6 +305,19 @@ The UI path is straightforward:
 | `nvs del <key>` | Delete NVS key | `nvs del hostname` |
 | `nvs erase` | Erase all NVS | `nvs erase` |
 
+### Environment and Scheduling
+| Command | Description | Example |
+|---------|-------------|---------|
+| `env` | List environment variables | `env` |
+| `export NAME=VALUE` | Set environment variable | `export WIFI_SSID=myssid` |
+| `unset NAME` | Remove environment variable | `unset WIFI_SSID` |
+| `printenv NAME` | Print one environment variable | `printenv WIFI_SSID` |
+| `run <command...>` | Run a command in the background | `run echo hello` |
+| `at <delay_ms> <command...>` | Run a command once later | `at 5000 echo done` |
+| `every <period_ms> <command...>` | Run a command repeatedly | `every 1000 ps` |
+| `jobs` | List scheduled jobs | `jobs` |
+| `killjob <name>` | Cancel a scheduled job | `killjob job_123` |
+
 ### Feature Modules
 | Command | Description | Example |
 |---------|-------------|---------|
@@ -309,6 +325,12 @@ The UI path is straightforward:
 | `pwm duty <channel> <percent>` | Set PWM duty in percent | `pwm duty 0 25` |
 | `pwm freq <channel> <freq_hz>` | Change PWM frequency | `pwm freq 0 1000` |
 | `pwm deinit <channel>` | Deinitialize PWM channel | `pwm deinit 0` |
+| `timer create <name> <period_ms> <reload>` | Create software timer | `timer create blink 1000 true` |
+| `timer start <name>` | Start timer | `timer start blink` |
+| `timer stop <name>` | Stop timer | `timer stop blink` |
+| `timer restart <name> <period_ms>` | Change timer period | `timer restart blink 500` |
+| `timer delete <name>` | Delete timer | `timer delete blink` |
+| `timer list` | List timers | `timer list` |
 | `msgq create <name> <size> <count>` | Create IPC message queue | `msgq create q1 16 8` |
 | `msgq send <name> <data>` | Send text payload to queue | `msgq send q1 hello` |
 | `msgq recv <name> [timeout_ms]` | Receive queue payload | `msgq recv q1 1000` |
@@ -332,6 +354,9 @@ The UI path is straightforward:
 | `test ipc` | Run IPC component tests | `test ipc` |
 | `test ota` | Run OTA component tests | `test ota` |
 | `test pwm` | Run PWM component tests | `test pwm` |
+| `test timer` | Run timer component tests | `test timer` |
+| `test env` | Run environment component tests | `test env` |
+| `test sched` | Run scheduler component tests | `test sched` |
 | `test all` | Run all feature test suites | `test all` |
 
 ---

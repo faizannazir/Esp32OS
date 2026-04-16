@@ -1,5 +1,6 @@
 #include "os_shell.h"
 #include "os_logging.h"
+#include "os_env.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -386,7 +387,11 @@ int shell_execute(int fd, const char *raw_line)
     if (raw_line[0] == '#') return SHELL_CMD_OK;
 
     char line[SHELL_MAX_LINE_LEN];
+    char expanded[SHELL_MAX_LINE_LEN];
     strncpy(line, raw_line, sizeof(line) - 1);
+    line[sizeof(line) - 1] = '\0';
+    os_env_expand(line, expanded, sizeof(expanded));
+    strncpy(line, expanded, sizeof(line) - 1);
     line[sizeof(line) - 1] = '\0';
 
     /* Trim trailing whitespace */

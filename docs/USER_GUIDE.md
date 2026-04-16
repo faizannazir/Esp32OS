@@ -101,8 +101,12 @@ Default Telnet credentials:
 Feature module commands:
 
 - `pwm` controls PWM channels (`init`, `duty`, `freq`, `deinit`, `status`)
+- `timer` creates and manages software timers (`create`, `start`, `stop`, `restart`, `delete`, `list`)
 - `msgq` manages message queues (`create`, `delete`, `send`, `recv`, `list`)
 - `event` manages event groups (`create`, `delete`, `set`, `clear`, `get`, `wait`)
+- `env` lists environment variables, while `export`, `unset`, and `printenv` manage values
+- `run` launches a command in the background, `at` schedules a one-shot command, and `every` schedules a repeating command
+- `jobs` lists scheduled commands and `killjob` cancels one by name
 - `mqtt` manages broker connectivity and publish/subscribe flow
 - `ota` manages firmware updates (`update`, `status`, `confirm`, `rollback`)
 
@@ -122,6 +126,12 @@ esp32os> mqtt config mqtt://broker.hivemq.com
 esp32os> mqtt connect
 esp32os> mqtt pub dev/status online -q 1
 esp32os> mqtt pubhex dev/raw DEADBEEF
+
+esp32os> export WIFI_SSID=myssid
+esp32os> printenv WIFI_SSID
+esp32os> run echo background hello
+esp32os> at 5000 echo run later
+esp32os> every 1000 ps
 
 esp32os> ota status
 ```

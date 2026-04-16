@@ -37,6 +37,8 @@
 
 #include "os_pwm.h"
 #include "os_timer.h"
+#include "os_env.h"
+#include "os_scheduler.h"
 #include "os_ipc.h"
 #include "os_mqtt.h"
 #include "os_ota.h"
@@ -182,7 +184,23 @@ void app_main(void)
         OS_LOGI(TAG, "Timer subsystem initialized");
     }
 
-    /* ── 5c. IPC ──────────────────────────────── */
+    /* ── 5c. Environment store ─────────────────── */
+    ret = os_env_init();
+    if (ret != ESP_OK) {
+        OS_LOGW(TAG, "Environment init failed");
+    } else {
+        OS_LOGI(TAG, "Environment store initialized");
+    }
+
+    /* ── 5d. Scheduler ─────────────────────────── */
+    ret = os_scheduler_init();
+    if (ret != ESP_OK) {
+        OS_LOGW(TAG, "Scheduler init failed");
+    } else {
+        OS_LOGI(TAG, "Scheduler initialized");
+    }
+
+    /* ── 5e. IPC ──────────────────────────────── */
     ret = os_ipc_init();
     if (ret != ESP_OK) {
         OS_LOGW(TAG, "IPC init failed");

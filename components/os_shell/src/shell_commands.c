@@ -11,6 +11,9 @@
 #include "os_networking.h"
 #include "os_drivers.h"
 
+#include "os_env.h"
+#include "os_scheduler.h"
+
 
 #include "os_pwm.h"
 #include "os_timer.h"
@@ -45,6 +48,8 @@ extern void os_ipc_test_run_all(void);
 extern void os_ota_test_run_all(void);
 extern void os_pwm_test_run_all(void);
 extern void os_timer_test_run_all(void);
+extern void os_env_test_run_all(void);
+extern void os_scheduler_test_run_all(void);
 
 /* ────────────────────────────────────────────────
    Utility macro
@@ -1012,6 +1017,184 @@ static int cmd_timer(int fd, int argc, char **argv)
 }
 
 /* ══════════════════════════════════════════════════
+   ENV COMMANDS
+   ══════════════════════════════════════════════════ */
+
+static int cmd_env(int fd, int argc, char **argv)
+{
+    (void)argc; (void)argv;
+    os_env_list(fd);
+    return SHELL_CMD_OK;
+}
+
+static int cmd_export(int fd, int argc, char **argv)
+{
+    if (argc < 2) {
+        SH_WRITE("Usage: export NAME=VALUE\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    char *eq = strchr(argv[1], '=');
+    if (!eq || eq == argv[1]) {
+        SH_WRITE("Usage: export NAME=VALUE\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    *eq = '\0';
+    const char *name = argv[1];
+    const char *value = eq + 1;
+    esp_err_t ret = os_env_set(name, value);
+    if (ret != ESP_OK) {
+        SH_PRINTF("export: failed for '%s'\r\n", name);
+        return SHELL_CMD_ERROR;
+    }
+
+    SH_PRINTF("%s=%s\r\n", name, value);
+    return SHELL_CMD_OK;
+}
+
+static int cmd_unset(int fd, int argc, char **argv)
+{
+    (void)fd;
+    if (argc < 2) {
+        SH_WRITE("Usage: unset NAME\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    if (os_env_unset(argv[1]) != ESP_OK) {
+        SH_PRINTF("unset: '%s' not found\r\n", argv[1]);
+        return SHELL_CMD_ERROR;
+    }
+    return SHELL_CMD_OK;
+}
+
+static int cmd_printenv(int fd, int argc, char **argv)
+{
+    if (argc < 2) {
+        SH_WRITE("Usage: printenv NAME\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    char value[OS_ENV_VALUE_LEN] = {0};
+    if (os_env_get(argv[1], value, sizeof(value)) != ESP_OK) {
+        SH_PRINTF("printenv: '%s' not found\r\n", argv[1]);
+        return SHELL_CMD_ERROR;
+    }
+
+    SH_WRITE(value);
+    SH_WRITE("\r\n");
+    return SHELL_CMD_OK;
+}
+
+/* ══════════════════════════════════════════════════
+   SCHEDULER / BACKGROUND COMMANDS
+   ══════════════════════════════════════════════════ */
+
+static int cmd_run(int fd, int argc, char **argv)
+{
+    if (argc < 2) {
+        SH_WRITE("Usage: run <command...>\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    char command[SHELL_MAX_LINE_LEN] = {0};
+    for (int i = 1; i < argc; i++) {
+        strncat(command, argv[i], sizeof(command) - strlen(command) - 2);
+        if (i < argc - 1) {
+            strncat(command, " ", sizeof(command) - strlen(command) - 1);
+        }
+    }
+
+    char job_name[OS_SCHED_NAME_LEN];
+    snprintf(job_name, sizeof(job_name), "run_%u", (unsigned)esp_timer_get_time());
+    esp_err_t ret = os_scheduler_run_background(job_name, command, fd);
+    if (ret != ESP_OK) {
+        SH_WRITE("run: failed to launch background task\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    SH_PRINTF("Started background task: %s\r\n", command);
+    return SHELL_CMD_OK;
+}
+
+static int cmd_at(int fd, int argc, char **argv)
+{
+    if (argc < 3) {
+        SH_WRITE("Usage: at <delay_ms> <command...>\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    uint32_t delay_ms = (uint32_t)atoi(argv[1]);
+    char command[SHELL_MAX_LINE_LEN] = {0};
+    for (int i = 2; i < argc; i++) {
+        strncat(command, argv[i], sizeof(command) - strlen(command) - 2);
+        if (i < argc - 1) {
+            strncat(command, " ", sizeof(command) - strlen(command) - 1);
+        }
+    }
+
+    char name[OS_SCHED_NAME_LEN];
+    snprintf(name, sizeof(name), "job_%u", (unsigned)esp_timer_get_time());
+    if (os_scheduler_schedule(name, command, delay_ms, false, fd) != ESP_OK) {
+        SH_WRITE("at: failed to schedule job\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    SH_PRINTF("Scheduled '%s' in %" PRIu32 " ms\r\n", command, delay_ms);
+    return SHELL_CMD_OK;
+}
+
+static int cmd_every(int fd, int argc, char **argv)
+{
+    if (argc < 3) {
+        SH_WRITE("Usage: every <period_ms> <command...>\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    uint32_t period_ms = (uint32_t)atoi(argv[1]);
+    char command[SHELL_MAX_LINE_LEN] = {0};
+    for (int i = 2; i < argc; i++) {
+        strncat(command, argv[i], sizeof(command) - strlen(command) - 2);
+        if (i < argc - 1) {
+            strncat(command, " ", sizeof(command) - strlen(command) - 1);
+        }
+    }
+
+    char name[OS_SCHED_NAME_LEN];
+    snprintf(name, sizeof(name), "job_%u", (unsigned)esp_timer_get_time());
+    if (os_scheduler_schedule(name, command, period_ms, true, fd) != ESP_OK) {
+        SH_WRITE("every: failed to schedule job\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    SH_PRINTF("Scheduled repeating job '%s' every %" PRIu32 " ms\r\n", command, period_ms);
+    return SHELL_CMD_OK;
+}
+
+static int cmd_jobs(int fd, int argc, char **argv)
+{
+    (void)argc; (void)argv;
+    os_scheduler_list(fd);
+    return SHELL_CMD_OK;
+}
+
+static int cmd_killjob(int fd, int argc, char **argv)
+{
+    if (argc < 2) {
+        SH_WRITE("Usage: killjob <name>\r\n");
+        return SHELL_CMD_ERROR;
+    }
+
+    if (os_scheduler_cancel(argv[1]) != ESP_OK) {
+        SH_PRINTF("killjob: '%s' not found\r\n", argv[1]);
+        return SHELL_CMD_ERROR;
+    }
+
+    SH_PRINTF("Cancelled job '%s'\r\n", argv[1]);
+    return SHELL_CMD_OK;
+}
+
+/* ══════════════════════════════════════════════════
    IPC COMMANDS
    ══════════════════════════════════════════════════ */
 
@@ -1426,7 +1609,7 @@ static int cmd_ota(int fd, int argc, char **argv)
 static int cmd_test(int fd, int argc, char **argv)
 {
     if (argc < 2) {
-        SH_WRITE("Usage: test <mqtt|ipc|ota|pwm|timer|all>\r\n");
+        SH_WRITE("Usage: test <mqtt|ipc|ota|pwm|timer|env|sched|all>\r\n");
         return SHELL_CMD_ERROR;
     }
 
@@ -1450,13 +1633,23 @@ static int cmd_test(int fd, int argc, char **argv)
         SH_WRITE("Running TIMER test suite...\r\n");
         os_timer_test_run_all();
     }
+    else if (strcmp(argv[1], "env") == 0) {
+        SH_WRITE("Running ENV test suite...\r\n");
+        os_env_test_run_all();
+    }
+    else if (strcmp(argv[1], "sched") == 0) {
+        SH_WRITE("Running SCHEDULER test suite...\r\n");
+        os_scheduler_test_run_all();
+    }
     else if (strcmp(argv[1], "all") == 0) {
-        SH_WRITE("Running all feature test suites (MQTT, IPC, OTA, PWM, TIMER)...\r\n");
+        SH_WRITE("Running all feature test suites (MQTT, IPC, OTA, PWM, TIMER, ENV, SCHED)...\r\n");
         os_mqtt_test_run_all();
         os_ipc_test_run_all();
         os_ota_test_run_all();
         os_pwm_test_run_all();
         os_timer_test_run_all();
+        os_env_test_run_all();
+        os_scheduler_test_run_all();
     }
     else {
         SH_PRINTF("test: unknown suite '%s'\r\n", argv[1]);
@@ -1520,6 +1713,16 @@ void shell_commands_register_all(void)
         /* IPC */
         {"msgq",      "Message queue operations",                            "msgq <create|delete|send|recv|list>", cmd_msgq},
         {"event",     "Event group operations",                              "event <create|delete|set|clear|get|wait>", cmd_event},
+        /* Env / Scheduler */
+        {"env",       "List environment variables",                           "env",                      cmd_env},
+        {"export",    "Set environment variable",                             "export NAME=VALUE",        cmd_export},
+        {"unset",     "Unset environment variable",                           "unset NAME",               cmd_unset},
+        {"printenv",  "Print environment variable",                           "printenv NAME",            cmd_printenv},
+        {"run",       "Run a command in the background",                      "run <command...>",         cmd_run},
+        {"at",        "Schedule a one-shot command",                         "at <delay_ms> <command...>", cmd_at},
+        {"every",     "Schedule a repeating command",                        "every <period_ms> <command...>", cmd_every},
+        {"jobs",      "List scheduled jobs",                                  "jobs",                     cmd_jobs},
+        {"killjob",   "Cancel a scheduled job",                               "killjob <name>",           cmd_killjob},
         /* MQTT */
         {"mqtt",      "MQTT client operations",                              "mqtt <config|connect|disconnect|status|pub|sub>", cmd_mqtt},
         /* OTA */

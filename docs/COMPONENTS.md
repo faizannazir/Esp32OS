@@ -298,7 +298,21 @@ esp_err_t shell_register_command(const shell_command_t *cmd);
 ```c
 void shell_write(int fd, const char *str);
 void shell_printf(int fd, const char *fmt, ...);
+
 ```
+
+### Host Integration Validation
+
+For shell command workflows that do not require hardware, run:
+
+```bash
+python3 tools/test_shell_host_integration.py
+```
+
+This validates behavior for:
+
+- `env`, `export`, `unset`, `printenv`
+- `run`, `at`, `every`, `jobs`, `killjob`
 
 `fd == -1` → write to UART; `fd >= 0` → write to Telnet socket.
 
@@ -315,4 +329,82 @@ static const shell_command_t my_cmd =
     SHELL_CMD_ENTRY("mycmd", "My description", "mycmd [args]", my_handler);
 
 shell_register_command(&my_cmd);
+```
+
+---
+
+## os_timer
+
+**Header:** `components/os_timer/include/os_timer.h`
+
+### Initialisation
+```c
+esp_err_t os_timer_init(void);
+void      os_timer_deinit(void);
+```
+
+### Timer API
+```c
+typedef void (*os_timer_cb_t)(void *arg);
+
+typedef struct {
+    const char *name;
+    uint32_t    period_ms;
+    bool        reload;
+    os_timer_cb_t callback;
+    void       *arg;
+} os_timer_config_t;
+
+typedef struct os_timer_s *os_timer_t;
+
+os_timer_t os_timer_create(const os_timer_config_t *config);
+esp_err_t  os_timer_delete(os_timer_t timer);
+esp_err_t  os_timer_start(os_timer_t timer);
+esp_err_t  os_timer_stop(os_timer_t timer);
+esp_err_t  os_timer_restart(os_timer_t timer, uint32_t new_period_ms);
+os_timer_t os_timer_find(const char *name);
+void       os_timer_list(int fd);
+```
+
+---
+
+## os_env
+
+**Header:** `components/os_env/include/os_env.h`
+
+### Initialisation
+```c
+esp_err_t os_env_init(void);
+void      os_env_deinit(void);
+```
+
+### Variable API
+```c
+esp_err_t os_env_set(const char *name, const char *value);
+esp_err_t os_env_get(const char *name, char *buf, size_t buf_sz);
+esp_err_t os_env_unset(const char *name);
+esp_err_t os_env_clear(void);
+int       os_env_list(int fd);
+size_t    os_env_expand(const char *input, char *output, size_t out_sz);
+```
+
+---
+
+## os_scheduler
+
+**Header:** `components/os_scheduler/include/os_scheduler.h`
+
+### Initialisation
+```c
+esp_err_t os_scheduler_init(void);
+void      os_scheduler_deinit(void);
+```
+
+### Job API
+```c
+esp_err_t os_scheduler_run_background(const char *name, const char *command, int fd);
+esp_err_t os_scheduler_schedule(const char *name, const char *command, uint32_t delay_ms, bool repeat, int fd);
+esp_err_t os_scheduler_cancel(const char *name);
+void      os_scheduler_list(int fd);
+bool      os_scheduler_is_running(const char *name);
 ```
