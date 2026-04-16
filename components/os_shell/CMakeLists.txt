@@ -9,6 +9,9 @@ idf_component_register(
         os_fs
         os_networking
         os_pwm
+        os_timer
+        os_env
+        os_scheduler
         os_ipc
         os_mqtt
         os_ota

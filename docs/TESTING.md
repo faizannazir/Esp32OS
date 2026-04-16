@@ -43,7 +43,31 @@ ESP-IDF includes the `unity` test framework. This repository does not currently 
 CI sanity checks validate the test harness itself with:
 
 - `python -m py_compile tools/test_integration.py`
+- `python -m py_compile tools/test_shell_host_integration.py`
+- `python tools/test_shell_host_integration.py`
 - `python tools/test_integration.py --help`
+
+### Host shell integration tests
+
+This repository includes an offline host-side integration runner for shell command workflows that do not require hardware access.
+
+From the project root:
+
+```bash
+python3 tools/test_shell_host_integration.py
+```
+
+Covered command workflows:
+
+- `env`
+- `export`
+- `unset`
+- `printenv`
+- `run`
+- `at`
+- `every`
+- `jobs`
+- `killjob`
 
 ### Integration script
 
@@ -79,10 +103,13 @@ esp32os> test mqtt
 esp32os> test ipc
 esp32os> test ota
 esp32os> test pwm
+esp32os> test timer
+esp32os> test env
+esp32os> test sched
 esp32os> test all
 ```
 
-Use `test all` as a quick regression pass after changes in `os_mqtt`, `os_ipc`, `os_ota`, or `os_pwm`.
+Use `test all` as a quick regression pass after changes in `os_mqtt`, `os_ipc`, `os_ota`, `os_pwm`, `os_timer`, `os_env`, or `os_scheduler`.
 
 ### MQTT Payload Validation
 
