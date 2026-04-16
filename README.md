@@ -154,12 +154,15 @@ Run the hardware integration script from the project root after flashing:
 ```bash
 python3 -m pip install pyserial
 python3 tools/test_shell_host_integration.py
+python3 tools/test_build_health.py --target esp32
 python3 tools/test_integration.py --port /dev/ttyUSB0
 ```
 
 Expected result: all checks pass (count may change as the script evolves).
 
 `test_shell_host_integration.py` runs offline command workflow checks for `env/export/unset/printenv/run/at/every/jobs/killjob` and does not require an attached board.
+
+`test_build_health.py` validates build artifacts, firmware size headroom, and IRAM/DRAM usage budgets from the generated map file.
 
 ### 5. Flash & Monitor
 
