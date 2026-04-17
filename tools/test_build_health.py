@@ -19,6 +19,7 @@ import argparse
 import csv
 import os
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -107,6 +108,12 @@ def find_idf_python() -> Optional[Path]:
     candidates.append(home / ".espressif" / "python_env" / "idf6.0_py3.11_env" / "bin" / "python")
     candidates.append(home / ".espressif" / "python_env" / "idf6.0_py3.10_env" / "bin" / "python")
 
+    # Fallback to system python if environment-specific python not found
+    for python_name in ["python3", "python"]:
+        pypath = shutil.which(python_name)
+        if pypath:
+            candidates.append(Path(pypath))
+
     for candidate in candidates:
         if candidate.is_file():
             return candidate
@@ -118,7 +125,8 @@ def run_idf_size(idf_size_py: Path, map_file: Path) -> str:
     cmd = [str(idf_python), str(idf_size_py), str(map_file)]
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "idf_size.py failed")
+        error_msg = proc.stderr.strip() if proc.stderr else proc.stdout.strip()
+        raise RuntimeError(f"idf_size.py failed (exit {proc.returncode}): {error_msg or 'unknown error'}")
     return proc.stdout
 
 
@@ -133,15 +141,37 @@ def parse_memory_percent(idf_size_out: str, label: str) -> float:
         # ["", "IRAM", "94551", "72.14", "36521", "131072", ""]
         if len(parts) >= 4 and parts[1] == label:
             pct = parts[3]
-            if pct:
-                return float(pct)
+            if pct and pct != '':
+                try:
+                    return float(pct)
+                except (ValueError, IndexError):
+                    pass
 
         # Fallback for plain whitespace table rows.
         tokens = line.split()
         if len(tokens) >= 3 and tokens[0] == label:
-            return float(tokens[2])
+            try:
+                return float(tokens[2])
+            except (ValueError, IndexError):
+                pass
+        
+        # Additional fallback: look for percentage patterns in the line
+        # e.g., "IRAM 94551 72.14 36521 131072"
+        if tokens and tokens[0] == label:
+            for token in tokens[1:]:
+                try:
+                    val = float(token)
+                    # Check if it looks like a percentage (0-100)
+                    if 0 <= val <= 100:
+                        return val
+                except ValueError:
+                    continue
 
-    raise ValueError(f"Could not parse {label} usage percent from idf_size output")
+    # Provide detailed error message for debugging
+    lines_with_label = [line for line in idf_size_out.splitlines() if label in line]
+    error_detail = f"Expected '{label}' row not found" if not lines_with_label else \
+                   f"Found '{label}' in table but could not parse percentage: {repr(lines_with_label[0] if lines_with_label else '')}"
+    raise ValueError(f"Could not parse {label} usage percent from idf_size output. {error_detail}")
 
 
 def check_required_files(build_dir: Path) -> list[CheckResult]:
@@ -237,9 +267,38 @@ def check_memory_usage(build_dir: Path, iram_max_pct: float, dram_max_pct: float
             )
         ]
 
-    output = run_idf_size(idf_size_py, map_file)
-    iram_pct = parse_memory_percent(output, "IRAM")
-    dram_pct = parse_memory_percent(output, "DRAM")
+    try:
+        output = run_idf_size(idf_size_py, map_file)
+    except RuntimeError as e:
+        return [
+            CheckResult(
+                name="memory:idf_size_output",
+                ok=False,
+                details=str(e),
+            )
+        ]
+
+    try:
+        iram_pct = parse_memory_percent(output, "IRAM")
+    except ValueError as e:
+        return [
+            CheckResult(
+                name="memory:iram_budget",
+                ok=False,
+                details=str(e),
+            )
+        ]
+
+    try:
+        dram_pct = parse_memory_percent(output, "DRAM")
+    except ValueError as e:
+        return [
+            CheckResult(
+                name="memory:dram_budget",
+                ok=False,
+                details=str(e),
+            )
+        ]
 
     return [
         CheckResult(
