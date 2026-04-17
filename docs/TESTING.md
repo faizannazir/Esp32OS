@@ -44,8 +44,26 @@ CI sanity checks validate the test harness itself with:
 
 - `python -m py_compile tools/test_integration.py`
 - `python -m py_compile tools/test_shell_host_integration.py`
+- `python -m py_compile tools/test_build_health.py`
 - `python tools/test_shell_host_integration.py`
 - `python tools/test_integration.py --help`
+
+### Build size and memory budget checks
+
+This repository includes `tools/test_build_health.py` to validate build artifacts and enforce size budgets without hardware.
+
+From the project root after `idf.py build`:
+
+```bash
+python3 tools/test_build_health.py --target esp32
+```
+
+The script verifies:
+
+- required artifacts exist (`.bin`, `.elf`, `.map`, bootloader, partition table)
+- app binary fits in the factory partition with minimum free headroom
+- IRAM and DRAM usage percentages from `idf_size.py` stay under budget
+- expected core component libraries are present in the linker map
 
 ### Host shell integration tests
 
