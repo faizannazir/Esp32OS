@@ -10,7 +10,11 @@
 [![Build System](https://img.shields.io/badge/Build-CMake-blue)](CMakeLists.txt)
 [![Scripting](https://img.shields.io/badge/Scripting-Python%203.8%2B-blue)](tools/test_integration.py)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-orange)](https://github.com/FreeRTOS/FreeRTOS-Kernel)
-
+[![GitHub stars](https://img.shields.io/github/stars/faizannazir/Esp32OS)](https://github.com/faizannazir/Esp32OS/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/faizannazir/Esp32OS)](https://github.com/faizannazir/Esp32OS/network)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![ESP-IDF](https://img.shields.io/badge/ESP--IDF-%3E%3D5.0-blue)](https://docs.espressif.com/projects/esp-idf/)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/faizannazir/Esp32OS/pr-checks.yml)](https://github.com/faizannazir/Esp32OS/actions)
 > A high-performance, modular embedded operating system kernel for the ESP32, delivering Linux-style command-line power within a microcontroller's constraints.
 > 
 ⚡ Esp32OS — A lightweight open-source operating system for ESP32  
