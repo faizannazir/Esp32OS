@@ -296,6 +296,9 @@ def check_memory_usage(build_dir: Path, iram_max_pct: float, dram_max_pct: float
     try:
         iram_pct = parse_memory_percent(output, "IRAM")
     except ValueError as e:
+        import sys
+        print(f"DEBUG: idf_size output length: {len(output)}", file=sys.stderr)
+        print(f"DEBUG: idf_size output (first 500 chars):\n{output[:500]}", file=sys.stderr)
         return [
             CheckResult(
                 name="memory:iram_budget",
@@ -307,6 +310,10 @@ def check_memory_usage(build_dir: Path, iram_max_pct: float, dram_max_pct: float
     try:
         dram_pct = parse_memory_percent(output, "DRAM")
     except ValueError as e:
+        import sys
+        print(f"DEBUG: idf_size output length: {len(output)}", file=sys.stderr)
+        print(f"DEBUG: idf_size output (first 500 chars):\n{output[:500]}", file=sys.stderr)
+        print(f"DEBUG: Full DRAM parsing error: {e}", file=sys.stderr)
         return [
             CheckResult(
                 name="memory:dram_budget",
