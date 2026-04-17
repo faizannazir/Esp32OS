@@ -81,11 +81,16 @@ def find_idf_size_py() -> Optional[Path]:
     candidates = []
     idf_path = os.environ.get("IDF_PATH")
     if idf_path:
+        # CI environments often use /opt/esp/idf
         candidates.append(Path(idf_path) / "tools" / "idf_size.py")
 
     home = Path.home()
     candidates.append(home / ".espressif" / "v6.0" / "esp-idf" / "tools" / "idf_size.py")
     candidates.append(home / ".espressif" / "v5.2" / "esp-idf" / "tools" / "idf_size.py")
+    
+    # Also check common CI paths
+    candidates.append(Path("/esp/idf/tools/idf_size.py"))
+    candidates.append(Path("/opt/esp/idf/tools/idf_size.py"))
 
     for candidate in candidates:
         if candidate.is_file():
@@ -108,6 +113,10 @@ def find_idf_python() -> Optional[Path]:
     candidates.append(home / ".espressif" / "python_env" / "idf6.0_py3.11_env" / "bin" / "python")
     candidates.append(home / ".espressif" / "python_env" / "idf6.0_py3.10_env" / "bin" / "python")
 
+    # Also check common CI paths
+    candidates.append(Path("/opt/python/*/bin/python3"))
+    candidates.append(Path("/opt/esp/python/*/bin/python3"))
+
     # Fallback to system python if environment-specific python not found
     for python_name in ["python3", "python"]:
         pypath = shutil.which(python_name)
@@ -117,6 +126,12 @@ def find_idf_python() -> Optional[Path]:
     for candidate in candidates:
         if candidate.is_file():
             return candidate
+        # Handle glob patterns
+        if "*" in str(candidate):
+            from glob import glob
+            for match in glob(str(candidate)):
+                if Path(match).is_file():
+                    return Path(match)
     return None
 
 
