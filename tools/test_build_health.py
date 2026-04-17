@@ -145,50 +145,53 @@ def run_idf_size(idf_size_py: Path, map_file: Path) -> str:
     return proc.stdout
 
 
-def parse_memory_percent(idf_size_out: str, label: str) -> Optional[float]:
-    """
-    Parse memory percentage from idf_size output.
-    Returns None if the memory region is not found (e.g., some targets don't have DRAM).
-    """
-    # Handles unicode/ascii table lines by column split.
+def parse_memory_stats(idf_size_out: str, label: str) -> tuple[Optional[float], Optional[int]]:
+    """Parse used percentage and total bytes for an exact memory row label."""
     for line in idf_size_out.splitlines():
         if label not in line:
             continue
 
         parts = [p.strip() for p in re.split(r"[│|]", line)]
-        # Expected columns after split:
+        # Rich/unicode/ascii table split usually gives:
         # ["", "IRAM", "94551", "72.14", "36521", "131072", ""]
-        if len(parts) >= 4 and parts[1] == label:
-            pct = parts[3]
-            if pct and pct != '':
-                try:
-                    return float(pct)
-                except (ValueError, IndexError):
-                    pass
+        if len(parts) >= 6 and parts[1] == label:
+            pct: Optional[float] = None
+            total: Optional[int] = None
 
-        # Fallback for plain whitespace table rows.
-        tokens = line.split()
-        if len(tokens) >= 3 and tokens[0] == label:
-            try:
-                return float(tokens[2])
-            except (ValueError, IndexError):
-                pass
-        
-        # Additional fallback: look for percentage patterns in the line
-        # e.g., "IRAM 94551 72.14 36521 131072"
-        if tokens and tokens[0] == label:
-            for token in tokens[1:]:
+            if parts[3]:
                 try:
-                    val = float(token)
-                    # Check if it looks like a percentage (0-100)
-                    if 0 <= val <= 100:
-                        return val
+                    pct = float(parts[3])
+                except ValueError:
+                    pct = None
+
+            if parts[5]:
+                try:
+                    total = int(parts[5].replace(",", ""))
+                except ValueError:
+                    total = None
+
+            return pct, total
+
+        # Fallback for plain whitespace rows.
+        tokens = line.split()
+        if len(tokens) >= 2 and tokens[0] == label:
+            numbers: list[float] = []
+            for token in tokens[1:]:
+                clean = token.replace(",", "")
+                try:
+                    numbers.append(float(clean))
                 except ValueError:
                     continue
 
-    # Return None if the memory region is not found
-    # (some targets may not have certain memory regions)
-    return None
+            if len(numbers) >= 4:
+                pct = numbers[1]
+                total = int(numbers[3])
+                return pct, total
+
+            if len(numbers) >= 2:
+                return numbers[1], None
+
+    return None, None
 
 
 def check_required_files(build_dir: Path) -> list[CheckResult]:
@@ -295,16 +298,23 @@ def check_memory_usage(build_dir: Path, iram_max_pct: float, dram_max_pct: float
             )
         ]
 
-    iram_pct = parse_memory_percent(output, "IRAM")
+    iram_pct, iram_total = parse_memory_stats(output, "IRAM")
+    dram_pct, _ = parse_memory_stats(output, "DRAM")
+    diram_pct, _ = parse_memory_stats(output, "DIRAM")
+
     if iram_pct is None:
-        import sys
-        print(f"DEBUG: IRAM not found in idf_size output", file=sys.stderr)
-        print(f"DEBUG: idf_size output (first 500 chars):\n{output[:500]}", file=sys.stderr)
-        # If IRAM is missing, this is likely a configuration error - skip IRAM check
         iram_result = CheckResult(
             name="memory:iram_budget",
             ok=True,
             details="IRAM region not present in this build configuration (skipped)",
+        )
+    elif diram_pct is not None and iram_total is not None and iram_total <= 16 * 1024:
+        # esp32s3 exposes a small dedicated IRAM window (often 100% by design).
+        # In this mode, DIRAM is the meaningful RAM budget signal.
+        iram_result = CheckResult(
+            name="memory:iram_budget",
+            ok=True,
+            details=f"IRAM {iram_pct:.2f}% on dedicated {human_bytes(iram_total)} region (informational)",
         )
     else:
         iram_result = CheckResult(
@@ -313,22 +323,23 @@ def check_memory_usage(build_dir: Path, iram_max_pct: float, dram_max_pct: float
             details=f"IRAM {iram_pct:.2f}% <= {iram_max_pct:.2f}%",
         )
 
-    dram_pct = parse_memory_percent(output, "DRAM")
-    if dram_pct is None:
-        import sys
-        print(f"DEBUG: DRAM not found in idf_size output", file=sys.stderr)
-        print(f"DEBUG: idf_size output (first 500 chars):\n{output[:500]}", file=sys.stderr)
-        # If DRAM is missing, this is likely a configuration error - skip DRAM check
-        dram_result = CheckResult(
-            name="memory:dram_budget",
-            ok=True,
-            details="DRAM region not present in this build configuration (skipped)",
-        )
-    else:
+    if dram_pct is not None:
         dram_result = CheckResult(
             name="memory:dram_budget",
             ok=dram_pct <= dram_max_pct,
             details=f"DRAM {dram_pct:.2f}% <= {dram_max_pct:.2f}%",
+        )
+    elif diram_pct is not None:
+        dram_result = CheckResult(
+            name="memory:dram_budget",
+            ok=diram_pct <= dram_max_pct,
+            details=f"DIRAM {diram_pct:.2f}% <= {dram_max_pct:.2f}% (used as DRAM budget)",
+        )
+    else:
+        dram_result = CheckResult(
+            name="memory:dram_budget",
+            ok=True,
+            details="DRAM/DIRAM region not present in this build configuration (skipped)",
         )
 
     return [iram_result, dram_result]
