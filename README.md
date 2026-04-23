@@ -2,10 +2,8 @@
 
 [![Espressif](https://img.shields.io/badge/Espressif-Systems-E7352C?logo=espressif&logoColor=white)](https://www.espressif.com/)
 [![ESP32](https://img.shields.io/badge/ESP32-Board-0A84FF?logo=espressif&logoColor=white)](https://www.espressif.com/en/products/socs/esp32)
-[![ESP-IDF](https://img.shields.io/badge/ESP--IDF-Framework-1F6FEB?logo=espressif&logoColor=white)](https://github.com/espressif/esp-idf)
 [![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v6.0-blue)](https://docs.espressif.com/projects/esp-idf)
 [![Target](https://img.shields.io/badge/Target-ESP32%20%7C%20ESP32--S3-green)](https://www.espressif.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 [![Language](https://img.shields.io/badge/Language-C%20(C17)-lightgrey)]()
 [![Build System](https://img.shields.io/badge/Build-CMake-blue)](CMakeLists.txt)
 [![Scripting](https://img.shields.io/badge/Scripting-Python%203.8%2B-blue)](tools/test_integration.py)
@@ -13,7 +11,6 @@
 [![GitHub stars](https://img.shields.io/github/stars/faizannazir/Esp32OS)](https://github.com/faizannazir/Esp32OS/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/faizannazir/Esp32OS)](https://github.com/faizannazir/Esp32OS/network)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![ESP-IDF](https://img.shields.io/badge/ESP--IDF-%3E%3D5.0-blue)](https://docs.espressif.com/projects/esp-idf/)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/faizannazir/Esp32OS/pr-checks.yml)](https://github.com/faizannazir/Esp32OS/actions)
 > A high-performance, modular embedded operating system kernel for the ESP32, delivering Linux-style command-line power within a microcontroller's constraints.
 > 
