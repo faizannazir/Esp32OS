@@ -25,6 +25,7 @@
 ESP32OS layers a clean OS architecture on top of FreeRTOS and ESP-IDF, giving you:
 
 - A **full interactive shell** (UART + Telnet over WiFi) with command history, ANSI colours, and line editing
+- An **on-device web portal** served by the ESP32 itself for live KPIs, process inspection, firmware actions, and shell command execution
 - **Process management** — create, list, kill, suspend, resume tasks like Linux processes
 - **SPIFFS file system** — `ls`, `cd`, `cat`, `write`, `rm`, `mkdir`, `df`
 - **Networking** — WiFi scan/connect, ping, HTTP GET, auto-reconnect

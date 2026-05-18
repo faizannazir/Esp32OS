@@ -91,6 +91,10 @@ void shell_print_help(int fd);
  *  Returns SHELL_CMD_* code. */
 int shell_execute(int fd, const char *line);
 
+/** Execute a command and capture its text output into a caller buffer. */
+esp_err_t shell_execute_capture(const char *line, char *out_buf, size_t out_sz,
+                                int *cmd_ret);
+
 /** Output helpers (use fd=-1 for UART) */
 void shell_write(int fd, const char *str);
 void shell_printf(int fd, const char *fmt, ...) __attribute__((format(printf, 2, 3)));

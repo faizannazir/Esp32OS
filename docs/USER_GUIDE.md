@@ -33,7 +33,15 @@ idf.py -p /dev/ttyUSB0 flash monitor
 
 ## First Boot
 
-On boot, ESP32OS starts the kernel, filesystem, networking, shell, and watchdog tasks. You should see the boot banner followed by the `esp32os>` prompt.
+On boot, ESP32OS starts the kernel, filesystem, networking, shell, watchdog, and web portal tasks. You should see the boot banner followed by the `esp32os>` prompt and a portal URL like:
+
+```text
+ESP32OS Embedded OS v1.0.0
+Type 'help' for commands
+
+Web portal: http://192.168.4.1/
+esp32os>
+```
 
 Useful first commands:
 
@@ -45,9 +53,22 @@ df
 wifi status
 ```
 
+## Web Portal
+
+The on-device web portal is the primary interface for live monitoring and control:
+
+- **Live KPIs**: View heap memory, CPU usage, and task count over time
+- **Process Inspection**: List running processes and inspect individual task details
+- **Shell Execution**: Run commands from the browser and see output inline
+- **Process Control**: Suspend, resume, or terminate tasks
+- **Firmware Actions**: Confirm or roll back OTA updates
+- **System Control**: Reboot the board
+
+The portal is available at the URL printed on boot. It works over both WiFi (if connected to an external network) and the on-board AP (if not connected), so you can always access it.
+
 ## Connect to the Shell
 
-You can use either the UART console or Telnet.
+You can use the UART console or Telnet for command-line access.
 
 ### UART
 
@@ -88,7 +109,11 @@ Default Telnet credentials:
 - Username: `admin`
 - Password: `esp32os`
 
-## Common Commands
+## Access the Portal
+
+Open a web browser and navigate to the URL printed on the serial console at boot (typically `http://192.168.4.1/` if WiFi is not connected, or the board's IP on your network if connected). The portal requires no authentication and provides a graphical dashboard for system diagnostics and control.
+
+## Common Shell Commands
 
 - `help` shows all shell commands
 - `ps` lists running processes
