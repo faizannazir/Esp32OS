@@ -37,6 +37,7 @@
 static struct {
     bool                initialised;
     esp_netif_t        *netif_sta;
+    esp_netif_t        *netif_ap;
     EventGroupHandle_t  events;
     int                 retry_count;
     os_net_status_t     status;
@@ -115,6 +116,8 @@ esp_err_t os_net_init(void)
 
     s_net.netif_sta = esp_netif_create_default_wifi_sta();
     if (!s_net.netif_sta) return ESP_ERR_NO_MEM;
+    s_net.netif_ap = esp_netif_create_default_wifi_ap();
+    if (!s_net.netif_ap) return ESP_ERR_NO_MEM;
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -124,13 +127,21 @@ esp_err_t os_net_init(void)
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
                                                ip_event_handler, NULL));
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    wifi_config_t ap_cfg = {0};
+    strncpy((char *)ap_cfg.ap.ssid, "ESP32OS", sizeof(ap_cfg.ap.ssid) - 1);
+    ap_cfg.ap.ssid_len = strlen((char *)ap_cfg.ap.ssid);
+    ap_cfg.ap.channel = 1;
+    ap_cfg.ap.max_connection = 4;
+    ap_cfg.ap.authmode = WIFI_AUTH_OPEN;
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_cfg));
     ESP_ERROR_CHECK(esp_wifi_start());
 
     s_net.events = xEventGroupCreate();
     s_net.initialised = true;
 
-    OS_LOGI(TAG, "Network stack initialised");
+    OS_LOGI(TAG, "Network stack initialised (STA + AP fallback)");
 
     /* Try auto-connect from NVS */
     char ssid[33] = {0}, pass[65] = {0};
@@ -247,6 +258,13 @@ void os_wifi_get_status(os_net_status_t *st)
         if (esp_wifi_sta_get_ap_info(&ap) == ESP_OK) {
             st->rssi = ap.rssi;
         }
+    } else if (s_net.netif_ap) {
+        esp_netif_ip_info_t ap_ip = {0};
+        if (esp_netif_get_ip_info(s_net.netif_ap, &ap_ip) == ESP_OK) {
+            snprintf(st->ip, sizeof(st->ip), IPSTR, IP2STR(&ap_ip.ip));
+            snprintf(st->gw, sizeof(st->gw), IPSTR, IP2STR(&ap_ip.gw));
+            snprintf(st->netmask, sizeof(st->netmask), IPSTR, IP2STR(&ap_ip.netmask));
+        }
     }
 }
 
@@ -357,7 +375,6 @@ static esp_err_t http_event_handler(esp_http_client_event_t *evt)
 {
     if (evt->event_id == HTTP_EVENT_ON_DATA) {
         if (!evt->user_data) return ESP_OK;
-        char *buf = evt->user_data;
         /* buf is (data_buf | size_remaining[4]) packed structure trick:
            We'll use a simpler approach with output_len tracked in user_data */
     }

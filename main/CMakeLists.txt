@@ -15,6 +15,7 @@ idf_component_register(
         os_mqtt
         os_ota
         os_shell
+        webportal
         os_drivers
         nvs_flash
         esp_system

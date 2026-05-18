@@ -15,6 +15,16 @@
 
 #define TAG "SHELL"
 
+typedef struct {
+    bool   active;
+    char  *buffer;
+    size_t buffer_size;
+    size_t length;
+} shell_capture_state_t;
+
+static shell_capture_state_t s_capture = {0};
+static portMUX_TYPE          s_capture_mux = portMUX_INITIALIZER_UNLOCKED;
+
 /* ────────────────────────────────────────────────
    Command Table
    ──────────────────────────────────────────────── */
@@ -70,9 +80,32 @@ static const char *history_next(history_t *h)
 /* ────────────────────────────────────────────────
    I/O Helpers
    ──────────────────────────────────────────────── */
+static void shell_capture_append(const char *str)
+{
+    if (!str) return;
+
+    taskENTER_CRITICAL(&s_capture_mux);
+    if (s_capture.active && s_capture.buffer && s_capture.buffer_size > 0) {
+        size_t available = (s_capture.length < s_capture.buffer_size - 1)
+                         ? (s_capture.buffer_size - 1 - s_capture.length)
+                         : 0;
+        if (available > 0) {
+            size_t len = strnlen(str, available);
+            memcpy(s_capture.buffer + s_capture.length, str, len);
+            s_capture.length += len;
+            s_capture.buffer[s_capture.length] = '\0';
+        }
+    }
+    taskEXIT_CRITICAL(&s_capture_mux);
+}
+
 void shell_write(int fd, const char *str)
 {
     if (!str) return;
+    if (s_capture.active) {
+        shell_capture_append(str);
+        return;
+    }
     size_t len = strlen(str);
     if (fd < 0) {
         uart_write_bytes(CONFIG_ESP_CONSOLE_UART_NUM, str, len);
@@ -421,6 +454,36 @@ int shell_execute(int fd, const char *raw_line)
 
     int ret = cmd->handler(fd, argc, argv);
     return ret;
+}
+
+esp_err_t shell_execute_capture(const char *line, char *out_buf, size_t out_sz,
+                                int *cmd_ret)
+{
+    if (!line || !out_buf || out_sz == 0) return ESP_ERR_INVALID_ARG;
+
+    taskENTER_CRITICAL(&s_capture_mux);
+    if (s_capture.active) {
+        taskEXIT_CRITICAL(&s_capture_mux);
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_capture.active = true;
+    s_capture.buffer = out_buf;
+    s_capture.buffer_size = out_sz;
+    s_capture.length = 0;
+    s_capture.buffer[0] = '\0';
+    taskEXIT_CRITICAL(&s_capture_mux);
+
+    int ret = shell_execute(-1, line);
+
+    taskENTER_CRITICAL(&s_capture_mux);
+    s_capture.active = false;
+    s_capture.buffer = NULL;
+    s_capture.buffer_size = 0;
+    s_capture.length = 0;
+    taskEXIT_CRITICAL(&s_capture_mux);
+
+    if (cmd_ret) *cmd_ret = ret;
+    return ESP_OK;
 }
 
 /* ────────────────────────────────────────────────

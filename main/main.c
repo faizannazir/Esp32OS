@@ -42,6 +42,7 @@
 #include "os_ipc.h"
 #include "os_mqtt.h"
 #include "os_ota.h"
+#include "webportal.h"
 
 #define TAG "MAIN"
 
@@ -233,6 +234,19 @@ void app_main(void)
             if (os_ota_needs_confirmation()) {
                 OS_LOGW(TAG, "Firmware needs confirmation! Run: ota confirm");
             }
+        }
+
+        /* Start embedded web portal (if enabled) */
+        if (webportal_start() == ESP_OK) {
+            os_net_status_t st = {0};
+            os_wifi_get_status(&st);
+            if (strlen(st.ip) > 0) {
+                OS_LOGI(TAG, "Web portal: http://%s/", st.ip);
+            } else {
+                OS_LOGI(TAG, "Web portal started, but no IP assigned yet");
+            }
+        } else {
+            OS_LOGI(TAG, "Web portal not started (disabled or error)");
         }
     }
 
