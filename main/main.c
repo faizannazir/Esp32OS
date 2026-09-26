@@ -46,6 +46,9 @@
 
 #define TAG "MAIN"
 
+/* Accommodates kernel statistics collection and debug-log formatting. */
+#define SYS_MONITOR_STACK_SIZE_BYTES 4096
+
 /* Forward declarations */
 void shell_commands_register_all(void);
 static void system_monitor_task(void *arg);
@@ -275,7 +278,7 @@ void app_main(void)
 
     /* ── 11. System monitor task ────────────── */
     os_process_create("sys_monitor", system_monitor_task,
-                      NULL, 2048, 3, true);
+                      NULL, SYS_MONITOR_STACK_SIZE_BYTES, 3, true);
 
     OS_LOGI(TAG, "Boot complete.  All services running.");
 
