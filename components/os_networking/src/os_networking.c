@@ -1,4 +1,5 @@
 #include "os_networking.h"
+#include "sdkconfig.h"
 #include "os_logging.h"
 
 #include <string.h>
@@ -116,8 +117,10 @@ esp_err_t os_net_init(void)
 
     s_net.netif_sta = esp_netif_create_default_wifi_sta();
     if (!s_net.netif_sta) return ESP_ERR_NO_MEM;
+#if defined(CONFIG_ESP32OS_ENABLE_AP_FALLBACK) && CONFIG_ESP32OS_ENABLE_AP_FALLBACK
     s_net.netif_ap = esp_netif_create_default_wifi_ap();
     if (!s_net.netif_ap) return ESP_ERR_NO_MEM;
+#endif
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -127,6 +130,7 @@ esp_err_t os_net_init(void)
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
                                                ip_event_handler, NULL));
 
+#if defined(CONFIG_ESP32OS_ENABLE_AP_FALLBACK) && CONFIG_ESP32OS_ENABLE_AP_FALLBACK
     wifi_config_t ap_cfg = {0};
     strncpy((char *)ap_cfg.ap.ssid, "ESP32OS", sizeof(ap_cfg.ap.ssid) - 1);
     ap_cfg.ap.ssid_len = strlen((char *)ap_cfg.ap.ssid);
@@ -136,12 +140,19 @@ esp_err_t os_net_init(void)
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_cfg));
+#else
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+#endif
     ESP_ERROR_CHECK(esp_wifi_start());
 
     s_net.events = xEventGroupCreate();
     s_net.initialised = true;
 
-    OS_LOGI(TAG, "Network stack initialised (STA + AP fallback)");
+#if defined(CONFIG_ESP32OS_ENABLE_AP_FALLBACK) && CONFIG_ESP32OS_ENABLE_AP_FALLBACK
+    OS_LOGW(TAG, "Network stack initialised (STA + OPEN AP fallback enabled)");
+#else
+    OS_LOGI(TAG, "Network stack initialised (STA only; AP fallback disabled)");
+#endif
 
     /* Try auto-connect from NVS */
     char ssid[33] = {0}, pass[65] = {0};
