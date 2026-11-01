@@ -5,7 +5,7 @@ Thank you for your interest in contributing! This document covers everything you
 ## Quick Contribution Flow
 
 1. Fork and create a feature branch.
-2. Build for both targets (`esp32`, `esp32s3`).
+2. Build for all supported targets (`esp32`, `esp32s3`, `esp32c3`) where toolchain and hardware are available.
 3. Run integration tests on real hardware.
 4. Update docs if behavior or commands changed.
 5. Open a PR to `master`.
@@ -40,13 +40,13 @@ cd ~/esp-idf && ./install.sh esp32
 # 3. Create a feature branch
 git checkout -b feature/my-cool-feature
 
-# 4. Build to verify
+# 4. Build to verify (repeat for each supported target)
 cd ~/esp32os
 idf.py set-target esp32
 idf.py build
-
-# 5. Validate second target
 idf.py set-target esp32s3
+idf.py build
+idf.py set-target esp32c3
 idf.py build
 
 # 6. Run hardware integration test
@@ -190,7 +190,7 @@ int       my_sensor_read(void);   // returns value or -1 on error
 Before opening a PR, verify:
 
 - [ ] `idf.py build` succeeds with no warnings (`-Werror` is set)
-- [ ] Build succeeds for both targets: `esp32` and `esp32s3`
+- [ ] Build succeeds for supported targets: `esp32`, `esp32s3`, and `esp32c3`
 - [ ] New public functions are documented in the header
 - [ ] Existing API is not broken (no removal of public symbols)
 - [ ] Memory usage impact is documented (if significant)
