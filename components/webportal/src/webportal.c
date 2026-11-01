@@ -144,7 +144,8 @@ static esp_err_t handle_status(httpd_req_t *req)
              (unsigned)st.min_free_heap_bytes, (unsigned)st.largest_free_block,
              (unsigned)st.cpu_load_pct, (unsigned)st.process_count,
              (unsigned)(st.uptime_ms / 1000), netst.connected ? "true" : "false",
-             netst.connected ? netst.ip : "");
+             netst.connected ? netst.ip : "",
+             netst.connected ? netst.gw : "");
     return send_json(req, buf);
 }
 
