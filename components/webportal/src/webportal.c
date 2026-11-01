@@ -137,9 +137,9 @@ static esp_err_t handle_status(httpd_req_t *req)
     os_net_status_t netst = {0};
     os_wifi_get_status(&netst);
 
-    char buf[640];
+    char buf[768];
     snprintf(buf, sizeof(buf),
-             "{\"free_heap\":%u,\"total_heap\":%u,\"min_free_heap\":%u,\"largest_free_block\":%u,\"cpu_load_pct\":%u,\"procs\":%u,\"uptime_s\":%u,\"net\":{\"connected\":%s,\"ip\":\"%s\"}}",
+             "{\"free_heap\":%u,\"total_heap\":%u,\"min_free_heap\":%u,\"largest_free_block\":%u,\"cpu_load_pct\":%u,\"procs\":%u,\"uptime_s\":%u,\"net\":{\"connected\":%s,\"ip\":\"%s\",\"gw\":\"%s\"}}"
              (unsigned)st.free_heap_bytes, (unsigned)st.total_heap_bytes,
              (unsigned)st.min_free_heap_bytes, (unsigned)st.largest_free_block,
              (unsigned)st.cpu_load_pct, (unsigned)st.process_count,
