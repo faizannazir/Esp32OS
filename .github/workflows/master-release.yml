@@ -6,7 +6,9 @@ on:
       - master
 
 permissions:
+  actions: read
   contents: write
+  pull-requests: read
 
 jobs:
   build-test:
@@ -21,6 +23,47 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Reuse verified pull-request firmware artifacts
+        id: reuse
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          echo "reused=false" >> "$GITHUB_OUTPUT"
+          PR_INFO="$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0] | [.number, .head.sha] | @tsv' 2>/dev/null || true)"
+          if [ -z "$PR_INFO" ]; then
+            echo "No merged pull request found for this push; a source build will run."
+            exit 0
+          fi
+          read -r PR_NUMBER PR_HEAD_SHA <<< "$PR_INFO"
+          echo "Checking successful PR artifacts for PR #$PR_NUMBER ($PR_HEAD_SHA)"
+          RUNS_JSON="$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/workflows/pr-checks.yml/runs?event=pull_request&status=success&per_page=100")"
+          RUN_ID="$(printf '%s' "$RUNS_JSON" | jq -r --arg pr "$PR_NUMBER" --arg head "$PR_HEAD_SHA" '[.[] | .workflow_runs[]? | select(any(.pull_requests[]?; ((.number|tostring)==$pr) and .head.sha==$head))] | sort_by(.run_started_at) | last | .id // empty')"
+          if [ -z "$RUN_ID" ]; then
+            echo "No successful matching PR run found; a source build will run."
+            exit 0
+          fi
+          rm -rf dist && mkdir -p dist
+          if ! gh run download "$RUN_ID" --name pr-build-artifacts --dir dist; then
+            echo "PR artifact download failed; falling back to a source build."
+            rm -rf dist && mkdir -p dist
+            exit 0
+          fi
+          EXPECTED_TREE="$(git rev-parse HEAD^{tree})"
+          ARTIFACT_TREE="$(jq -r '.source_tree_sha // empty' dist/manifest.json 2>/dev/null || true)"
+          if [ -z "$ARTIFACT_TREE" ] || [ "$ARTIFACT_TREE" != "$EXPECTED_TREE" ]; then
+            echo "Artifact source tree does not match the merged tree; falling back to a source build."
+            rm -rf dist && mkdir -p dist
+            exit 0
+          fi
+          for target in esp32 esp32s3 esp32c3; do
+            test -s "dist/$target/esp32os-$target.bin" || { echo "Missing $target firmware artifact"; rm -rf dist && mkdir -p dist; exit 0; }
+            test -s "dist/$target/bootloader-$target.bin" || { echo "Missing $target bootloader artifact"; rm -rf dist && mkdir -p dist; exit 0; }
+          done
+          echo "Verified PR artifacts match the exact merged source tree. Skipping firmware rebuild."
+          echo "reused=true" >> "$GITHUB_OUTPUT"
 
       - name: Host Test Harness Checks
         run: |
@@ -30,6 +73,7 @@ jobs:
           python3 tools/test_shell_host_integration.py
 
       - name: Build Firmware (esp32)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
@@ -38,12 +82,14 @@ jobs:
           idf.py build
 
       - name: Validate Build Health (esp32)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
           python3 tools/test_build_health.py --target esp32
 
       - name: Package Output Files (esp32)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -71,6 +117,7 @@ jobs:
           )
 
       - name: Build Firmware (esp32s3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
@@ -79,12 +126,14 @@ jobs:
           idf.py build
 
       - name: Validate Build Health (esp32s3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
           python3 tools/test_build_health.py --target esp32s3
 
       - name: Package Output Files (esp32s3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -112,6 +161,7 @@ jobs:
           )
 
       - name: Build Firmware (esp32c3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
@@ -120,12 +170,14 @@ jobs:
           idf.py build
 
       - name: Validate Build Health (esp32c3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
           python3 tools/test_build_health.py --target esp32c3
 
       - name: Package Output Files (esp32c3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           set -euo pipefail
