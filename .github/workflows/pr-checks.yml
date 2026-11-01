@@ -101,6 +101,19 @@ jobs:
           cp build/bootloader/bootloader.bin dist/esp32c3/bootloader-esp32c3.bin
           cp build/partition_table/partition-table.bin dist/esp32c3/partition-table-esp32c3.bin
           cp sdkconfig dist/esp32c3/sdkconfig-esp32c3
+      - name: Write artifact provenance manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cat > dist/manifest.json <<EOF
+          {
+            "source_commit_sha": "$(git rev-parse HEAD)",
+            "source_tree_sha": "$(git rev-parse HEAD^{tree})",
+            "pull_request_number": "${{ github.event.pull_request.number }}",
+            "workflow_run_id": "${{ github.run_id }}"
+          }
+          EOF
       - name: Upload PR Build Artifacts
         uses: actions/upload-artifact@v4
         with:
