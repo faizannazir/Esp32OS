@@ -38,6 +38,8 @@ These repository-hosted SVG previews illustrate the desktop and narrow-screen la
 
 ![ESP32OS mobile dashboard preview](assets/dashboard-mobile-preview.svg)
 
+![ESP32OS dashboard settings preview](assets/dashboard-settings-preview.svg)
+
 ## Personalize your dashboard
 
 Select **Settings** in the dashboard header to customize the browser view:
