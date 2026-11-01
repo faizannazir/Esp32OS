@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="560" viewBox="0 0 1280 560" role="img" aria-labelledby="title desc">
+<title id="title">ESP32OS running on an ESP32 development board</title>
+<desc id="desc">Original vector illustration of an ESP32 development board connected to sensors and an LED, alongside a terminal showing the ESP32OS shell.</desc>
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071426"/><stop offset="1" stop-color="#102e43"/></linearGradient>
+ <linearGradient id="board" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#137c70"/><stop offset="1" stop-color="#0b514e"/></linearGradient>
+ <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0b1726"/><stop offset="1" stop-color="#101f31"/></linearGradient>
+ <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity=".35"/></filter>
+</defs>
+<rect width="1280" height="560" rx="28" fill="url(#bg)"/>
+<circle cx="1120" cy="80" r="170" fill="#1e8b88" opacity=".12"/><circle cx="90" cy="500" r="210" fill="#2f83b5" opacity=".10"/>
+<g opacity=".16" stroke="#7edbd0" fill="none"><path d="M0 100H250V150H330M0 130H200V180H290M950 0V80H1020V120H1280M1000 560V470H1080V420H1280"/><circle cx="250" cy="150" r="5" fill="#7edbd0"/><circle cx="1020" cy="120" r="5" fill="#7edbd0"/></g>
+<text x="64" y="78" fill="#8ce3d6" font-family="Arial,sans-serif" font-size="17" font-weight="700" letter-spacing="4">OPEN SOURCE • ESP-IDF • FREERTOS</text>
+<text x="64" y="150" fill="#fff" font-family="Arial,sans-serif" font-size="62" font-weight="700">ESP32OS</text>
+<text x="66" y="190" fill="#c8d8e5" font-family="Arial,sans-serif" font-size="24">Linux-style tools. Microcontroller-sized footprint.</text>
+<g filter="url(#shadow)" transform="translate(78 250) rotate(-5 185 110)">
+ <rect x="0" y="0" width="365" height="220" rx="22" fill="#d5e1e8"/>
+ <rect x="12" y="12" width="341" height="196" rx="16" fill="url(#board)"/>
+ <rect x="119" y="54" width="128" height="104" rx="8" fill="#172b3c" stroke="#9cb6c2" stroke-width="3"/>
+ <rect x="139" y="72" width="88" height="68" rx="4" fill="#243f52"/>
+ <path d="M146 83h74M146 91h74M146 99h74M146 107h74M146 115h74M146 123h74" stroke="#718e9c" stroke-width="2"/>
+ <text x="183" y="178" text-anchor="middle" fill="#e1f4f0" font-family="Arial,sans-serif" font-size="12" font-weight="700">ESP32 MODULE</text>
+ <rect x="24" y="64" width="65" height="92" rx="7" fill="#c5d1d8"/><path d="M33 77h47M33 89h47M33 101h47M33 113h47M33 125h47M33 137h47" stroke="#738996" stroke-width="4"/>
+ <rect x="270" y="48" width="62" height="112" rx="5" fill="#263b4a"/><g fill="#d5bd80"><circle cx="282" cy="61" r="4"/><circle cx="320" cy="61" r="4"/><circle cx="282" cy="147" r="4"/><circle cx="320" cy="147" r="4"/></g>
+ <g fill="#d8e4e9"><rect x="18" y="22" width="18" height="7" rx="2"/><rect x="47" y="22" width="18" height="7" rx="2"/><rect x="76" y="22" width="18" height="7" rx="2"/><rect x="105" y="22" width="18" height="7" rx="2"/><rect x="134" y="22" width="18" height="7" rx="2"/><rect x="163" y="22" width="18" height="7" rx="2"/><rect x="192" y="22" width="18" height="7" rx="2"/><rect x="221" y="22" width="18" height="7" rx="2"/><rect x="250" y="22" width="18" height="7" rx="2"/><rect x="279" y="22" width="18" height="7" rx="2"/></g>
+ <text x="182" y="196" text-anchor="middle" fill="#c6eee5" font-family="Arial,sans-serif" font-size="10" letter-spacing="2">DEVELOPMENT BOARD</text>
+</g>
+<g stroke="#67d8ca" stroke-width="3" fill="none"><path d="M438 342H520V300H570"/><path d="M435 385H500V430H570"/><path d="M438 300H470V270H520"/></g>
+<g filter="url(#shadow)">
+ <rect x="570" y="230" width="640" height="260" rx="18" fill="#c8d5df"/>
+ <rect x="578" y="238" width="624" height="244" rx="13" fill="url(#screen)"/>
+ <path d="M578 275H1202" stroke="#33475c" stroke-width="2"/>
+ <circle cx="601" cy="256" r="6" fill="#ff6b6b"/><circle cx="623" cy="256" r="6" fill="#f6c85f"/><circle cx="645" cy="256" r="6" fill="#55c98a"/>
+ <text x="675" y="261" fill="#91a7ba" font-family="monospace" font-size="13">ESP32OS • UART CONSOLE</text>
+ <g font-family="monospace" font-size="17">
+  <text x="610" y="315" fill="#70e0c8">esp32os&gt; uname -a</text><text x="610" y="344" fill="#d6e4ee">ESP32OS  ESP32  FreeRTOS  ESP-IDF</text>
+  <text x="610" y="382" fill="#70e0c8">esp32os&gt; free</text><text x="610" y="411" fill="#d6e4ee">Heap: 334684 total  116600 used  218084 free</text>
+  <text x="610" y="449" fill="#70e0c8">esp32os&gt; wifi status</text><text x="610" y="470" fill="#a9c3d3">STA mode • network diagnostics ready</text>
+ </g>
+</g>
+<g transform="translate(960 108)" filter="url(#shadow)">
+ <rect width="180" height="72" rx="14" fill="#153c4b" stroke="#4fbdb1"/>
+ <path d="M26 36h34m-17-17v34" stroke="#8ce3d6" stroke-width="4" stroke-linecap="round"/>
+ <text x="78" y="31" fill="#fff" font-family="Arial,sans-serif" font-size="14" font-weight="700">SENSORS</text><text x="78" y="50" fill="#a8c7d4" font-family="Arial,sans-serif" font-size="11">I²C • ADC • GPIO</text>
+</g>
+<text x="64" y="525" fill="#9bb5c7" font-family="Arial,sans-serif" font-size="14">Illustrative concept artwork • board layout is not a hardware reference</text>
+</svg>
