@@ -160,6 +160,10 @@ ESP32OS also includes an optional browser dashboard served directly from the dev
 
 <p align="center"><img src="docs/assets/dashboard-mobile-preview.svg" alt="ESP32OS responsive mobile dashboard preview with metric cards, telemetry and device controls" width="78%"></p>
 
+<p align="center"><strong>Dashboard preferences</strong></p>
+
+<p align="center"><img src="docs/assets/dashboard-settings-preview.svg" alt="ESP32OS dashboard settings preview showing theme, accent, density, refresh interval and panel visibility preferences" width="85%"></p>
+
 Personalize the dashboard from **Settings**: choose dark, light or system appearance; select an accent color; switch between comfortable and compact density; set automatic refresh from 3 to 30 seconds or manual refresh; change the page heading; and show or hide individual panels. Preferences are stored locally in the browser and do not alter firmware or network configuration.
 
 See the [Browser Dashboard guide](docs/DASHBOARD.md) for setup, customization and security details.
