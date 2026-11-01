@@ -34,26 +34,43 @@ jobs:
             });
             const pr = associated.data.find(item => item.merged_at) || associated.data[0];
             if (!pr) {
-              core.info('No associated merged PR found; the source build will run.');
+              core.info('No associated PR found; the source build will run.');
               core.setOutput('run_id', '');
               return;
             }
-            const { data } = await github.rest.actions.listWorkflowRuns({
-              owner, repo, workflow_id: 'pr-checks.yml', event: 'pull_request',
-              status: 'success', per_page: 100
-            });
-            const matching = data.workflow_runs
-              .filter(run => run.pull_requests?.some(item =>
-                item.number === pr.number && item.head?.sha === pr.head.sha))
-              .sort((a, b) => Date.parse(a.run_started_at) - Date.parse(b.run_started_at));
-            const run = matching.at(-1);
-            if (!run) {
-              core.info(`No successful PR build found for #${pr.number}; the source build will run.`);
+
+            // PR checks run against GitHub's synthetic merge ref. Depending on
+            // the event/API response, the workflow run SHA may be the PR head
+            // SHA or the tested merge SHA. Query both explicitly; do not rely
+            // on the optional run.pull_requests nested field.
+            const candidateShas = [...new Set([pr.merge_commit_sha, pr.head.sha].filter(Boolean))];
+            let matchingRun = null;
+            for (const sha of candidateShas) {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: 'pr-checks.yml',
+                event: 'pull_request',
+                status: 'success',
+                head_sha: sha,
+                per_page: 100
+              });
+              const candidates = data.workflow_runs
+                .filter(run => run.conclusion === 'success' && run.head_sha === sha)
+                .sort((a, b) => Date.parse(a.run_started_at) - Date.parse(b.run_started_at));
+              if (candidates.length) {
+                matchingRun = candidates[candidates.length - 1];
+                break;
+              }
+            }
+
+            if (!matchingRun) {
+              core.info(`No successful PR build found for #${pr.number} (merge SHA: ${pr.merge_commit_sha || 'n/a'}, head SHA: ${pr.head.sha}); the source build will run.`);
               core.setOutput('run_id', '');
               return;
             }
-            core.info(`Found successful PR build ${run.id} for #${pr.number}.`);
-            core.setOutput('run_id', String(run.id));
+            core.info(`Found successful PR build ${matchingRun.id} for #${pr.number} at ${matchingRun.head_sha}.`);
+            core.setOutput('run_id', String(matchingRun.id));
 
       - name: Download matching PR firmware artifact
         if: steps.resolve.outputs.run_id != ''
