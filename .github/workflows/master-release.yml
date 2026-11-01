@@ -59,8 +59,13 @@ jobs:
             exit 0
           fi
           for target in esp32 esp32s3 esp32c3; do
-            test -s "dist/$target/esp32os-$target.bin" || { echo "Missing $target firmware artifact"; rm -rf dist && mkdir -p dist; exit 0; }
-            test -s "dist/$target/bootloader-$target.bin" || { echo "Missing $target bootloader artifact"; rm -rf dist && mkdir -p dist; exit 0; }
+            for artifact in "esp32os-$target.bin" "esp32os-$target.elf" "bootloader-$target.bin" "partition-table-$target.bin" "sdkconfig-$target"; do
+              if [ ! -s "dist/$target/$artifact" ]; then
+                echo "Missing $target artifact: $artifact"
+                rm -rf dist && mkdir -p dist
+                exit 0
+              fi
+            done
           done
           echo "Verified PR artifacts match the exact merged source tree. Skipping firmware rebuild."
           echo "reused=true" >> "$GITHUB_OUTPUT"
@@ -191,6 +196,16 @@ jobs:
           if [ -f build/flasher_args.json ]; then cp build/flasher_args.json "$out_dir/flasher_args-esp32c3.json"; fi
           cp sdkconfig "$out_dir/sdkconfig-esp32c3"
           ( cd "$out_dir" && zip -9 esp32os-esp32c3-artifacts.zip ./* )
+      - name: Ensure per-target artifact archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          for target in esp32 esp32s3 esp32c3; do
+            archive="dist/$target/esp32os-$target-artifacts.zip"
+            if [ ! -s "$archive" ]; then
+              ( cd "dist/$target" && zip -9 "esp32os-$target-artifacts.zip" ./* )
+            fi
+          done
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
