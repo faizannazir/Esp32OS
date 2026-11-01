@@ -1,4 +1,5 @@
 #include "os_shell.h"
+#include "sdkconfig.h"
 #include "os_logging.h"
 #include "os_env.h"
 
@@ -539,9 +540,14 @@ static void uart_shell_task(void *arg)
 #define TELNET_PRIORITY      6
 #define UART_SHELL_STACK_SIZE 16384
 
-/* Credentials (change via NVS in production) */
-#define TELNET_USERNAME      "admin"
-#define TELNET_PASSWORD      "esp32os"
+/* Telnet is opt-in; credentials are configured locally, never committed. */
+#if defined(CONFIG_ESP32OS_ENABLE_TELNET) && CONFIG_ESP32OS_ENABLE_TELNET
+#define TELNET_USERNAME      CONFIG_ESP32OS_TELNET_USERNAME
+#define TELNET_PASSWORD      CONFIG_ESP32OS_TELNET_PASSWORD
+#else
+#define TELNET_USERNAME      ""
+#define TELNET_PASSWORD      ""
+#endif
 
 typedef struct { int fd; char ip[20]; } telnet_session_arg_t;
 
@@ -684,9 +690,18 @@ esp_err_t shell_start_uart(void)
 
 esp_err_t shell_start_telnet(uint16_t port)
 {
+#if !defined(CONFIG_ESP32OS_ENABLE_TELNET) || !CONFIG_ESP32OS_ENABLE_TELNET
+    (void)port;
+    return ESP_ERR_NOT_SUPPORTED;
+#else
+    if (TELNET_USERNAME[0] == '\0' || TELNET_PASSWORD[0] == '\0') {
+        OS_LOGE(TAG, "Telnet requires a locally configured username and password");
+        return ESP_ERR_INVALID_STATE;
+    }
     if (port == 0) port = TELNET_PORT_DEFAULT;
     BaseType_t rc = xTaskCreate(telnet_server_task, "telnet_srv",
                                 4096, (void *)(uintptr_t)port,
                                 TELNET_PRIORITY, NULL);
     return (rc == pdPASS) ? ESP_OK : ESP_ERR_NO_MEM;
+#endif
 }
