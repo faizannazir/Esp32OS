@@ -100,9 +100,18 @@ jobs:
           # Trust only this job workspace, not every repository on the runner.
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           EXPECTED_TREE="$(git rev-parse HEAD^{tree})"
+          ARTIFACT_COMMIT="$(jq -r '.source_commit_sha // empty' dist/manifest.json 2>/dev/null || true)"
           ARTIFACT_TREE="$(jq -r '.source_tree_sha // empty' dist/manifest.json 2>/dev/null || true)"
-          if [ -z "$ARTIFACT_TREE" ] || [ "$ARTIFACT_TREE" != "$EXPECTED_TREE" ]; then
-            echo "Artifact source tree does not match the merged tree; a source build will run."
+          echo "Expected merged tree: $EXPECTED_TREE"
+          echo "Artifact source commit: ${ARTIFACT_COMMIT:-<missing>}"
+          echo "Artifact source tree: ${ARTIFACT_TREE:-<missing>}"
+          if [ -z "$ARTIFACT_COMMIT" ] || [ -z "$ARTIFACT_TREE" ]; then
+            echo "::warning::PR artifact has missing provenance; rebuilding from source."
+            rm -rf dist && mkdir -p dist
+            exit 0
+          fi
+          if [ "$ARTIFACT_TREE" != "$EXPECTED_TREE" ]; then
+            echo "::warning::PR artifact tree does not match merged tree; rebuilding from source."
             rm -rf dist && mkdir -p dist
             exit 0
           fi
