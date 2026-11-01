@@ -6,7 +6,7 @@
 
 **Build, inspect and control embedded systems with a modular C17 runtime, FreeRTOS task management and an interactive shell.**
 
-[![ESP-IDF 6.0](https://img.shields.io/badge/ESP--IDF-6.0- E7352C?logo=espressif&logoColor=white)](https://github.com/espressif/esp-idf)
+[![ESP-IDF 6.0](https://img.shields.io/badge/ESP--IDF-6.0-E7352C?logo=espressif&logoColor=white)](https://github.com/espressif/esp-idf)
 [![Targets](https://img.shields.io/badge/Targets-ESP32%20%7C%20S3%20%7C%20C3-168B75)](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/)
 [![Language](https://img.shields.io/badge/Language-C17-00599C?logo=c)](https://en.cppreference.com/w/c/17)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-3C873A)](https://www.freertos.org/)
