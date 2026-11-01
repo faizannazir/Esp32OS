@@ -33,7 +33,7 @@
 <tr>
 <td width="50%">
 <h3>⌨️ Interactive shell</h3>
-UART command line, command history, ANSI output and extensible command registration.
+UART command line, command history, ANSI output, extensible commands and an optional browser dashboard.
 </td>
 <td width="50%">
 <h3>🧠 Task & process tools</h3>
@@ -282,6 +282,7 @@ If ESP32OS is useful, consider **starring the repository** to help other embedde
 | Resource | Description |
 |---|---|
 | [User Guide](docs/USER_GUIDE.md) | Build, flash and use ESP32OS |
+| [Browser Dashboard](docs/DASHBOARD.md) | Enable and operate the optional on-device control panel |
 | [Architecture](docs/ARCHITECTURE.md) | System layers and design |
 | [Components](docs/COMPONENTS.md) | Component APIs and responsibilities |
 | [Testing](docs/TESTING.md) | Test strategy and validation |
