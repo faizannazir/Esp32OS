@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-and-check:
-    name: Build and Checks (esp32 + esp32s3)
+    name: Build and Checks (esp32 + esp32s3 + esp32c3)
     runs-on: ubuntu-latest
     container: espressif/idf:v6.0
     env:
@@ -77,6 +77,30 @@ jobs:
           cp build/partition_table/partition-table.bin dist/esp32s3/partition-table-esp32s3.bin
           cp sdkconfig dist/esp32s3/sdkconfig-esp32s3
 
+      - name: Build Firmware (esp32c3)
+        shell: bash
+        run: |
+          source "$IDF_PATH/export.sh"
+          idf.py fullclean
+          idf.py set-target esp32c3
+          idf.py build
+
+      - name: Validate Build Health (esp32c3)
+        shell: bash
+        run: |
+          source "$IDF_PATH/export.sh"
+          python3 tools/test_build_health.py --target esp32c3
+
+      - name: Package Artifacts (esp32c3)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/esp32c3
+          cp build/esp32os.bin dist/esp32c3/esp32os-esp32c3.bin
+          cp build/esp32os.elf dist/esp32c3/esp32os-esp32c3.elf
+          cp build/bootloader/bootloader.bin dist/esp32c3/bootloader-esp32c3.bin
+          cp build/partition_table/partition-table.bin dist/esp32c3/partition-table-esp32c3.bin
+          cp sdkconfig dist/esp32c3/sdkconfig-esp32c3
       - name: Upload PR Build Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -84,4 +108,5 @@ jobs:
           path: |
             dist/esp32/
             dist/esp32s3/
+            dist/esp32c3/
           if-no-files-found: error
