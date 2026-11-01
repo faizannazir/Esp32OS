@@ -51,6 +51,8 @@ jobs:
           cp build/bootloader/bootloader.bin dist/esp32/bootloader-esp32.bin
           cp build/partition_table/partition-table.bin dist/esp32/partition-table-esp32.bin
           cp sdkconfig dist/esp32/sdkconfig-esp32
+          if [ -f build/esp32os.map ]; then cp build/esp32os.map dist/esp32/esp32os-esp32.map; fi
+          if [ -f build/flasher_args.json ]; then cp build/flasher_args.json dist/esp32/flasher_args-esp32.json; fi
 
       - name: Build Firmware (esp32s3)
         shell: bash
@@ -76,6 +78,8 @@ jobs:
           cp build/bootloader/bootloader.bin dist/esp32s3/bootloader-esp32s3.bin
           cp build/partition_table/partition-table.bin dist/esp32s3/partition-table-esp32s3.bin
           cp sdkconfig dist/esp32s3/sdkconfig-esp32s3
+          if [ -f build/esp32os.map ]; then cp build/esp32os.map dist/esp32s3/esp32os-esp32s3.map; fi
+          if [ -f build/flasher_args.json ]; then cp build/flasher_args.json dist/esp32s3/flasher_args-esp32s3.json; fi
 
       - name: Build Firmware (esp32c3)
         shell: bash
@@ -101,6 +105,21 @@ jobs:
           cp build/bootloader/bootloader.bin dist/esp32c3/bootloader-esp32c3.bin
           cp build/partition_table/partition-table.bin dist/esp32c3/partition-table-esp32c3.bin
           cp sdkconfig dist/esp32c3/sdkconfig-esp32c3
+          if [ -f build/esp32os.map ]; then cp build/esp32os.map dist/esp32c3/esp32os-esp32c3.map; fi
+          if [ -f build/flasher_args.json ]; then cp build/flasher_args.json dist/esp32c3/flasher_args-esp32c3.json; fi
+      - name: Write artifact provenance manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cat > dist/manifest.json <<EOF
+          {
+            "source_commit_sha": "$(git rev-parse HEAD)",
+            "source_tree_sha": "$(git rev-parse HEAD^{tree})",
+            "pull_request_number": "${{ github.event.pull_request.number }}",
+            "workflow_run_id": "${{ github.run_id }}"
+          }
+          EOF
       - name: Upload PR Build Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -109,4 +128,5 @@ jobs:
             dist/esp32/
             dist/esp32s3/
             dist/esp32c3/
+            dist/manifest.json
           if-no-files-found: error

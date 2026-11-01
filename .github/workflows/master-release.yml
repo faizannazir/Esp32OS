@@ -6,7 +6,9 @@ on:
       - master
 
 permissions:
+  actions: read
   contents: write
+  pull-requests: read
 
 jobs:
   build-test:
@@ -21,7 +23,80 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Find successful PR build
+        id: resolve
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const associated = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner, repo, commit_sha: context.sha
+            });
+            const pr = associated.data.find(item => item.merged_at) || associated.data[0];
+            if (!pr) {
+              core.info('No associated merged PR found; the source build will run.');
+              core.setOutput('run_id', '');
+              return;
+            }
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner, repo, workflow_id: 'pr-checks.yml', event: 'pull_request',
+              status: 'success', per_page: 100
+            });
+            const matching = data.workflow_runs
+              .filter(run => run.pull_requests?.some(item =>
+                item.number === pr.number && item.head?.sha === pr.head.sha))
+              .sort((a, b) => Date.parse(a.run_started_at) - Date.parse(b.run_started_at));
+            const run = matching.at(-1);
+            if (!run) {
+              core.info(`No successful PR build found for #${pr.number}; the source build will run.`);
+              core.setOutput('run_id', '');
+              return;
+            }
+            core.info(`Found successful PR build ${run.id} for #${pr.number}.`);
+            core.setOutput('run_id', String(run.id));
 
+      - name: Download matching PR firmware artifact
+        if: steps.resolve.outputs.run_id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-build-artifacts
+          run-id: ${{ steps.resolve.outputs.run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: dist
+
+      - name: Verify reusable firmware artifact
+        id: reuse
+        shell: bash
+        env:
+          PR_RUN_ID: ${{ steps.resolve.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          echo "reused=false" >> "$GITHUB_OUTPUT"
+          if [ -z "$PR_RUN_ID" ] || [ ! -s dist/manifest.json ]; then
+            echo "No downloadable PR artifact or provenance manifest; a source build will run."
+            rm -rf dist && mkdir -p dist
+            exit 0
+          fi
+          EXPECTED_TREE="$(git rev-parse HEAD^{tree})"
+          ARTIFACT_TREE="$(jq -r '.source_tree_sha // empty' dist/manifest.json 2>/dev/null || true)"
+          if [ -z "$ARTIFACT_TREE" ] || [ "$ARTIFACT_TREE" != "$EXPECTED_TREE" ]; then
+            echo "Artifact source tree does not match the merged tree; a source build will run."
+            rm -rf dist && mkdir -p dist
+            exit 0
+          fi
+          for target in esp32 esp32s3 esp32c3; do
+            for artifact in "esp32os-$target.bin" "esp32os-$target.elf" "bootloader-$target.bin" "partition-table-$target.bin" "sdkconfig-$target"; do
+              if [ ! -s "dist/$target/$artifact" ]; then
+                echo "Missing $target artifact: $artifact"
+                rm -rf dist && mkdir -p dist
+                exit 0
+              fi
+            done
+          done
+          echo "Verified PR artifacts match the exact merged source tree. Skipping firmware rebuild."
+          echo "reused=true" >> "$GITHUB_OUTPUT"
       - name: Host Test Harness Checks
         run: |
           python3 -m py_compile tools/test_integration.py
@@ -30,6 +105,7 @@ jobs:
           python3 tools/test_shell_host_integration.py
 
       - name: Build Firmware (esp32)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
@@ -38,12 +114,14 @@ jobs:
           idf.py build
 
       - name: Validate Build Health (esp32)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
           python3 tools/test_build_health.py --target esp32
 
       - name: Package Output Files (esp32)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -71,6 +149,7 @@ jobs:
           )
 
       - name: Build Firmware (esp32s3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
@@ -79,12 +158,14 @@ jobs:
           idf.py build
 
       - name: Validate Build Health (esp32s3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
           python3 tools/test_build_health.py --target esp32s3
 
       - name: Package Output Files (esp32s3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -112,6 +193,7 @@ jobs:
           )
 
       - name: Build Firmware (esp32c3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
@@ -120,12 +202,14 @@ jobs:
           idf.py build
 
       - name: Validate Build Health (esp32c3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           source "$IDF_PATH/export.sh"
           python3 tools/test_build_health.py --target esp32c3
 
       - name: Package Output Files (esp32c3)
+        if: steps.reuse.outputs.reused != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -139,6 +223,16 @@ jobs:
           if [ -f build/flasher_args.json ]; then cp build/flasher_args.json "$out_dir/flasher_args-esp32c3.json"; fi
           cp sdkconfig "$out_dir/sdkconfig-esp32c3"
           ( cd "$out_dir" && zip -9 esp32os-esp32c3-artifacts.zip ./* )
+      - name: Ensure per-target artifact archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          for target in esp32 esp32s3 esp32c3; do
+            archive="dist/$target/esp32os-$target-artifacts.zip"
+            if [ ! -s "$archive" ]; then
+              ( cd "dist/$target" && zip -9 "esp32os-$target-artifacts.zip" ./* )
+            fi
+          done
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
