@@ -1,0 +1,39 @@
+menu "ESP32OS Security and Network Services"
+
+config ESP32OS_ENABLE_AP_FALLBACK
+    bool "Enable the ESP32OS Wi-Fi access point fallback"
+    default n
+    help
+        Enables a device-hosted Wi-Fi access point. Disabled by default.
+        Do not enable an open access point in production.
+
+config ESP32OS_ENABLE_WEB_PORTAL
+    bool "Enable the ESP32OS web control portal"
+    default n
+    help
+        Enables the HTTP portal with remote shell and device-control endpoints.
+        The portal currently has no authentication. Only enable it on an
+        isolated, trusted development network.
+
+config ESP32OS_ENABLE_TELNET
+    bool "Enable the Telnet remote shell"
+    default n
+    help
+        Enables the plaintext Telnet remote shell. Credentials and commands
+        are not encrypted. Prefer UART; only enable on a trusted network.
+
+if ESP32OS_ENABLE_TELNET
+config ESP32OS_TELNET_USERNAME
+    string "Telnet username"
+    default ""
+    help
+        Set a non-empty username locally in menuconfig. Do not commit credentials.
+
+config ESP32OS_TELNET_PASSWORD
+    string "Telnet password"
+    default ""
+    help
+        Set a unique password locally. Telnet transmits it in plaintext.
+endif
+
+endmenu
