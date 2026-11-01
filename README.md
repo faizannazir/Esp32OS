@@ -33,7 +33,7 @@
 <tr>
 <td width="50%">
 <h3>⌨️ Interactive shell</h3>
-UART command line, command history, ANSI output and extensible command registration.
+UART command line, command history, ANSI output, extensible commands and a customizable browser dashboard.
 </td>
 <td width="50%">
 <h3>🧠 Task & process tools</h3>
@@ -147,6 +147,26 @@ esp32os> uname -a
 esp32os> free
 esp32os> ps
 ```
+
+## 🖥️ Interactive browser dashboard
+
+ESP32OS also includes an optional browser dashboard served directly from the device. Monitor heap, CPU load, uptime, processes and Wi-Fi status; inspect telemetry; manage tasks; and use the shell from a browser.
+
+<p align="center"><strong>Desktop dashboard preview</strong></p>
+
+<p align="center"><img src="docs/assets/dashboard-desktop-preview.svg" alt="ESP32OS desktop dashboard preview showing live system metrics, heap telemetry, process management, command terminal and network controls" width="100%"></p>
+
+<p align="center"><strong>Responsive mobile layout preview</strong></p>
+
+<p align="center"><img src="docs/assets/dashboard-mobile-preview.svg" alt="ESP32OS responsive mobile dashboard preview with metric cards, telemetry and device controls" width="78%"></p>
+
+<p align="center"><strong>Dashboard preferences</strong></p>
+
+<p align="center"><img src="docs/assets/dashboard-settings-preview.svg" alt="ESP32OS dashboard settings preview showing theme, accent, density, refresh interval and panel visibility preferences" width="85%"></p>
+
+Personalize the dashboard from **Settings**: choose dark, light or system appearance; select an accent color; switch between comfortable and compact density; set automatic refresh from 3 to 30 seconds or manual refresh; change the page heading; and show or hide individual panels. Preferences are stored locally in the browser and do not alter firmware or network configuration.
+
+See the [Browser Dashboard guide](docs/DASHBOARD.md) for setup, customization and security details.
 
 ## 🖥️ See the shell in action
 
@@ -282,6 +302,7 @@ If ESP32OS is useful, consider **starring the repository** to help other embedde
 | Resource | Description |
 |---|---|
 | [User Guide](docs/USER_GUIDE.md) | Build, flash and use ESP32OS |
+| [Browser Dashboard](docs/DASHBOARD.md) | Enable and operate the optional on-device control panel |
 | [Architecture](docs/ARCHITECTURE.md) | System layers and design |
 | [Components](docs/COMPONENTS.md) | Component APIs and responsibilities |
 | [Testing](docs/TESTING.md) | Test strategy and validation |
