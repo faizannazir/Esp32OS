@@ -239,7 +239,8 @@ void app_main(void)
             }
         }
 
-        /* Start embedded web portal (if enabled) */
+#if defined(CONFIG_ESP32OS_ENABLE_WEB_PORTAL) && CONFIG_ESP32OS_ENABLE_WEB_PORTAL
+        /* WARNING: the portal has no authentication; use only on an isolated network. */
         if (webportal_start() == ESP_OK) {
             os_net_status_t st = {0};
             os_wifi_get_status(&st);
@@ -249,8 +250,11 @@ void app_main(void)
                 OS_LOGI(TAG, "Web portal started, but no IP assigned yet");
             }
         } else {
-            OS_LOGI(TAG, "Web portal not started (disabled or error)");
+            OS_LOGW(TAG, "Web portal failed to start");
         }
+#else
+        OS_LOGI(TAG, "Web portal disabled (secure default)");
+#endif
     }
 
     /* ── 7. Watchdog ────────────────────────── */
@@ -268,13 +272,17 @@ void app_main(void)
         OS_LOGI(TAG, "UART shell started (115200 baud, UART0)");
     }
 
-    /* ── 10. Telnet server ──────────────────── */
+    /* ── 10. Optional remote shell ─────────── */
+#if defined(CONFIG_ESP32OS_ENABLE_TELNET) && CONFIG_ESP32OS_ENABLE_TELNET
     ret = shell_start_telnet(2222);
     if (ret != ESP_OK) {
-        OS_LOGW(TAG, "Failed to start Telnet server");
+        OS_LOGW(TAG, "Telnet failed to start; check local credentials");
     } else {
-        OS_LOGI(TAG, "Telnet shell listening on port 2222");
+        OS_LOGW(TAG, "Telnet listening on port 2222; traffic is NOT encrypted");
     }
+#else
+    OS_LOGI(TAG, "Telnet disabled (secure default); use UART shell");
+#endif
 
     /* ── 11. System monitor task ────────────── */
     os_process_create("sys_monitor", system_monitor_task,
