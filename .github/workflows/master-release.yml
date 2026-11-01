@@ -96,6 +96,9 @@ jobs:
             rm -rf dist && mkdir -p dist
             exit 0
           fi
+          # The ESP-IDF container may see the checkout owned by the host runner UID.
+          # Trust only this job workspace, not every repository on the runner.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           EXPECTED_TREE="$(git rev-parse HEAD^{tree})"
           ARTIFACT_TREE="$(jq -r '.source_tree_sha // empty' dist/manifest.json 2>/dev/null || true)"
           if [ -z "$ARTIFACT_TREE" ] || [ "$ARTIFACT_TREE" != "$EXPECTED_TREE" ]; then
