@@ -43,7 +43,7 @@ jobs:
             // the event/API response, the workflow run SHA may be the PR head
             // SHA or the tested merge SHA. Query both explicitly; do not rely
             // on the optional run.pull_requests nested field.
-            const candidateShas = [...new Set([pr.merge_commit_sha, pr.head.sha].filter(Boolean))];
+            const candidateShas = [...new Set([pr.head.sha, pr.merge_commit_sha].filter(Boolean))];
             let matchingRun = null;
             for (const sha of candidateShas) {
               const { data } = await github.rest.actions.listWorkflowRuns({
@@ -56,7 +56,7 @@ jobs:
                 per_page: 100
               });
               const candidates = data.workflow_runs
-                .filter(run => run.conclusion === 'success' && run.head_sha === sha)
+                .filter(run => run.conclusion === 'success' && run.head_sha === sha && (!run.head_branch || run.head_branch === pr.head.ref))
                 .sort((a, b) => Date.parse(a.run_started_at) - Date.parse(b.run_started_at));
               if (candidates.length) {
                 matchingRun = candidates[candidates.length - 1];
