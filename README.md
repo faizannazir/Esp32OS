@@ -3,7 +3,7 @@
 [![Espressif](https://img.shields.io/badge/Espressif-Systems-E7352C?logo=espressif&logoColor=white)](https://www.espressif.com/)
 [![ESP32](https://img.shields.io/badge/ESP32-Board-0A84FF?logo=espressif&logoColor=white)](https://www.espressif.com/en/products/socs/esp32)
 [![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v6.0-blue)](https://docs.espressif.com/projects/esp-idf)
-[![Target](https://img.shields.io/badge/Target-ESP32%20%7C%20ESP32--S3-green)](https://www.espressif.com)
+[![Target](https://img.shields.io/badge/Target-ESP32%20%7C%20ESP32--S3%20%7C%20ESP32--C3-green)](https://www.espressif.com)
 [![Language](https://img.shields.io/badge/Language-C%20(C17)-lightgrey)]()
 [![Build System](https://img.shields.io/badge/Build-CMake-blue)](CMakeLists.txt)
 [![Scripting](https://img.shields.io/badge/Scripting-Python%203.8%2B-blue)](tools/test_integration.py)
@@ -24,8 +24,8 @@
 
 ESP32OS layers a clean OS architecture on top of FreeRTOS and ESP-IDF, giving you:
 
-- A **full interactive shell** (UART + Telnet over WiFi) with command history, ANSI colours, and line editing
-- An **on-device web portal** served by the ESP32 itself for live KPIs, process inspection, firmware actions, and shell command execution
+- A **full interactive shell** (UART by default; optional Telnet over WiFi) with command history, ANSI colours, and line editing
+- An **optional on-device web portal** for live KPIs, process inspection, firmware actions, and shell command execution (disabled by default)
 - **Process management** — create, list, kill, suspend, resume tasks like Linux processes
 - **SPIFFS file system** — `ls`, `cd`, `cat`, `write`, `rm`, `mkdir`, `df`
 - **Networking** — WiFi scan/connect, ping, HTTP GET, auto-reconnect
@@ -51,7 +51,7 @@ The core idea is not to replace Linux, but to provide a familiar operational mod
 
 ### What ESP32OS tries to achieve
 
-- Provide a stable command shell over UART and Telnet for development and field maintenance.
+- Provide a stable UART command shell, with optional plaintext Telnet for isolated development networks.
 - Offer a modular service layer (`os_kernel`, `os_fs`, `os_networking`, `os_logging`, `os_drivers`) with clean boundaries.
 - Keep APIs simple so contributors can add drivers and commands quickly.
 - Preserve deterministic embedded behavior using FreeRTOS scheduling and ESP-IDF device support.
@@ -78,7 +78,7 @@ The core idea is not to replace Linux, but to provide a familiar operational mod
 │                     Applications / User Code                     │
 ├─────────────────────────────────────────────────────────────────┤
 │                        Shell (CLI)                               │
-│          UART Session          │       Telnet Session            │
+│          UART Session          │   Optional Telnet Session      │
 ├────────────────────────────────┼────────────────────────────────┤
 │  System Services                                                 │
 │  ┌──────────┐ ┌──────────┐ ┌─────────────┐ ┌────────────────┐  │
@@ -191,18 +191,15 @@ Open any serial terminal (minicom, PuTTY, `idf.py monitor`):
 esp32os>
 ```
 
-### 7. Connect via Telnet (WiFi)
+### 7. Optional remote access (advanced)
+
+UART is the secure default. Telnet, the web control portal, and the AP fallback are disabled by default. Enable them locally with `idf.py menuconfig` under **ESP32OS Security and Network Services**.
+
+Telnet is plaintext: credentials and commands are not encrypted. Configure a unique username and password locally; never commit `sdkconfig` or reuse production credentials. The web portal currently has no authentication and exposes shell/device-control actions, so do not enable it on an untrusted network. The AP fallback is open if explicitly enabled.
 
 ```bash
-# First connect to WiFi from the serial shell:
-esp32os> wifi connect MySSID MyPassword
-
-# Then from your computer:
-telnet <esp32-ip> 2222
-
-# Default credentials:
-Username: admin
-Password: esp32os
+idf.py menuconfig
+idf.py build
 ```
 
 ### Example Terminal and UI Flow
@@ -417,7 +414,7 @@ The project now includes two GitHub Actions workflows:
 
 - `master-release.yml`:
     - Trigger: push to `master`
-    - Builds: `esp32`, `esp32s3`
+    - Builds: `esp32`, `esp32s3`, `esp32c3`
     - Creates auto tag and GitHub Release
     - Uploads release artifacts (`.bin`, `.elf`, `.map`, `.json`, `.zip`, `sdkconfig`)
 
@@ -505,11 +502,7 @@ Edit `sdkconfig.defaults` or run `idf.py menuconfig`:
 | `ESP_TASK_WDT_TIMEOUT_S` | 30 | Watchdog timeout |
 | `ESP_CONSOLE_UART_BAUDRATE` | 115200 | Serial baud |
 
-Telnet credentials are set at compile time in `os_shell.c`:
-```c
-#define TELNET_USERNAME  "admin"
-#define TELNET_PASSWORD  "esp32os"
-```
+Remote services are disabled by default. Configure optional AP fallback, web portal, and Telnet under **ESP32OS Security and Network Services** in `idf.py menuconfig`. Telnet credentials must be set locally and are transmitted in plaintext. The web portal has no authentication and should remain disabled except on isolated development networks.
 
 WiFi auto-connect is stored in NVS via `os_wifi_save_credentials()`.
 
