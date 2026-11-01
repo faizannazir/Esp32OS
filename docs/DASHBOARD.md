@@ -30,6 +30,27 @@ idf.py build
 idf.py -p /dev/ttyUSB0 flash monitor
 ```
 
+## Dashboard previews
+
+These repository-hosted SVG previews illustrate the desktop and narrow-screen layouts. They are design previews, not photographs or captures from a physical ESP32 board.
+
+![ESP32OS desktop dashboard preview](assets/dashboard-desktop-preview.svg)
+
+![ESP32OS mobile dashboard preview](assets/dashboard-mobile-preview.svg)
+
+## Personalize your dashboard
+
+Select **Settings** in the dashboard header to customize the browser view:
+
+- **Dashboard title:** set a heading that identifies your board or project.
+- **Appearance:** choose dark, light or follow the operating system preference.
+- **Accent color:** choose mint, blue, violet or amber.
+- **Layout density:** use comfortable spacing or a compact layout.
+- **Auto-refresh:** choose 3, 5, 10 or 30 seconds, or disable automatic refresh for manual-only updates.
+- **Panel visibility:** show or hide metric cards, telemetry chart, process table, command terminal and device controls.
+
+Select **Save preferences** to apply and save choices in this browser using local storage. **Reset defaults** restores the original dashboard layout. Preferences are browser-specific: they are not sent to the ESP32, do not modify firmware settings and are not shared with other users or browsers. Clearing this browser's site data resets them.
+
 ## Security warning
 
 The dashboard is a management interface, not a hardened remote administration service. It currently has no login, session authentication, TLS, CSRF protection or role-based authorization. Its endpoints can execute shell commands, manage tasks, confirm or roll back firmware, and reboot the device.
