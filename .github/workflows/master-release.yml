@@ -39,8 +39,12 @@ jobs:
           fi
           read -r PR_NUMBER PR_HEAD_SHA <<< "$PR_INFO"
           echo "Checking successful PR artifacts for PR #$PR_NUMBER ($PR_HEAD_SHA)"
-          RUNS_JSON="$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/workflows/pr-checks.yml/runs?event=pull_request&status=success&per_page=100")"
-          RUN_ID="$(printf '%s' "$RUNS_JSON" | jq -r --arg pr "$PR_NUMBER" --arg head "$PR_HEAD_SHA" '[.[] | .workflow_runs[]? | select(any(.pull_requests[]?; ((.number|tostring)==$pr) and .head.sha==$head))] | sort_by(.run_started_at) | last | .id // empty')"
+          RUNS_JSON="$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/workflows/pr-checks.yml/runs?event=pull_request&status=success&per_page=100" 2>/dev/null || true)"
+          if [ -z "$RUNS_JSON" ]; then
+            echo "Unable to list PR workflow runs; a source build will run."
+            exit 0
+          fi
+          RUN_ID="$(printf '%s' "$RUNS_JSON" | jq -r --arg pr "$PR_NUMBER" --arg head "$PR_HEAD_SHA" '[.[] | .workflow_runs[]? | select(any(.pull_requests[]?; ((.number|tostring)==$pr) and .head.sha==$head))] | sort_by(.run_started_at) | last | .id // empty' 2>/dev/null || true)"
           if [ -z "$RUN_ID" ]; then
             echo "No successful matching PR run found; a source build will run."
             exit 0
