@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-test:
-    name: Build and Test (esp32 + esp32s3)
+    name: Build and Test (esp32 + esp32s3 + esp32c3)
     runs-on: ubuntu-latest
     container: espressif/idf:v6.0
     env:
@@ -111,6 +111,34 @@ jobs:
             zip -9 "esp32os-esp32s3-artifacts.zip" ./*
           )
 
+      - name: Build Firmware (esp32c3)
+        shell: bash
+        run: |
+          source "$IDF_PATH/export.sh"
+          idf.py fullclean
+          idf.py set-target esp32c3
+          idf.py build
+
+      - name: Validate Build Health (esp32c3)
+        shell: bash
+        run: |
+          source "$IDF_PATH/export.sh"
+          python3 tools/test_build_health.py --target esp32c3
+
+      - name: Package Output Files (esp32c3)
+        shell: bash
+        run: |
+          set -euo pipefail
+          out_dir="dist/esp32c3"
+          mkdir -p "$out_dir"
+          cp build/esp32os.bin "$out_dir/esp32os-esp32c3.bin"
+          cp build/esp32os.elf "$out_dir/esp32os-esp32c3.elf"
+          cp build/bootloader/bootloader.bin "$out_dir/bootloader-esp32c3.bin"
+          cp build/partition_table/partition-table.bin "$out_dir/partition-table-esp32c3.bin"
+          if [ -f build/esp32os.map ]; then cp build/esp32os.map "$out_dir/esp32os-esp32c3.map"; fi
+          if [ -f build/flasher_args.json ]; then cp build/flasher_args.json "$out_dir/flasher_args-esp32c3.json"; fi
+          cp sdkconfig "$out_dir/sdkconfig-esp32c3"
+          ( cd "$out_dir" && zip -9 esp32os-esp32c3-artifacts.zip ./* )
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -118,6 +146,7 @@ jobs:
           path: |
             dist/esp32/
             dist/esp32s3/
+            dist/esp32c3/
           if-no-files-found: error
 
   tag-release:
