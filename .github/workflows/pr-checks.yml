@@ -115,15 +115,33 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Git commands run inside the ESP-IDF container, whose UID can differ
+          # from the host runner that created the checkout. Trust only this workspace.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          SOURCE_COMMIT="$(git rev-parse HEAD)"
+          SOURCE_TREE="$(git rev-parse 'HEAD^{tree}')"
+          test -n "$SOURCE_COMMIT"
+          test -n "$SOURCE_TREE"
+
           mkdir -p dist
           cat > dist/manifest.json <<EOF
           {
-            "source_commit_sha": "$(git rev-parse HEAD)",
-            "source_tree_sha": "$(git rev-parse HEAD^{tree})",
+            "source_commit_sha": "$SOURCE_COMMIT",
+            "source_tree_sha": "$SOURCE_TREE",
             "pull_request_number": "${{ github.event.pull_request.number }}",
             "workflow_run_id": "${{ github.run_id }}"
           }
           EOF
+
+          # Fail the PR build instead of publishing an artifact that can never
+          # pass the release workflow's provenance verification.
+          jq -e '
+            (.source_commit_sha | type == "string" and length == 40) and
+            (.source_tree_sha | type == "string" and length == 40) and
+            (.pull_request_number | length > 0) and
+            (.workflow_run_id | length > 0)
+          ' dist/manifest.json
       - name: Upload PR Build Artifacts
         uses: actions/upload-artifact@v4
         with:
