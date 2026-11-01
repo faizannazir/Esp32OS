@@ -2,7 +2,7 @@
 
 ## What You Need
 
-- ESP-IDF 5.x installed and exported in your shell session
+- ESP-IDF 6.0 installed and exported in your shell session
 - Python 3.8 or newer
 - A supported ESP32 board connected over USB
 - A serial terminal or `idf.py monitor`
@@ -17,7 +17,7 @@ idf.py set-target esp32
 idf.py build
 ```
 
-If you are using a different board, replace `esp32` with the target for that chip, such as `esp32s3`.
+If you are using a different board, select its target: `esp32`, `esp32s3`, or `esp32c3`.
 
 ## Flash
 
@@ -33,13 +33,14 @@ idf.py -p /dev/ttyUSB0 flash monitor
 
 ## First Boot
 
-On boot, ESP32OS starts the kernel, filesystem, networking, shell, watchdog, and web portal tasks. You should see the boot banner followed by the `esp32os>` prompt and a portal URL like:
+On boot, ESP32OS initializes its core services and UART shell. Remote services are disabled by default, so you should normally see the boot banner followed by the `esp32os>` prompt:
 
 ```text
 ESP32OS Embedded OS v1.0.0
 Type 'help' for commands
 
-Web portal: http://192.168.4.1/
+Web portal disabled (secure default)
+Telnet disabled (secure default)
 esp32os>
 ```
 
@@ -53,18 +54,17 @@ df
 wifi status
 ```
 
-## Web Portal
+## Optional web portal
 
-The on-device web portal is the primary interface for live monitoring and control:
+The web control portal is disabled by default. It currently has no authentication and exposes shell/device-control actions. Only enable it on an isolated development network that you trust.
 
-- **Live KPIs**: View heap memory, CPU usage, and task count over time
-- **Process Inspection**: List running processes and inspect individual task details
-- **Shell Execution**: Run commands from the browser and see output inline
-- **Process Control**: Suspend, resume, or terminate tasks
-- **Firmware Actions**: Confirm or roll back OTA updates
-- **System Control**: Reboot the board
+To opt in, run:
 
-The portal is available at the URL printed on boot. It works over both WiFi (if connected to an external network) and the on-board AP (if not connected), so you can always access it.
+```bash
+idf.py menuconfig
+```
+
+Open **ESP32OS Security and Network Services**, enable the web portal, save the configuration, then rebuild and flash. Do not expose the portal to the public internet or an untrusted LAN.
 
 ## Connect to the Shell
 
@@ -90,28 +90,25 @@ In VS Code, the normal workflow is:
 2. Flash from the integrated terminal with `idf.py -p <port> flash`
 3. Use the serial monitor or monitor output panel for the shell UI
 
-### Telnet
+### Optional Telnet
 
-1. Connect the board to WiFi from the UART shell:
+Telnet is disabled by default. It is plaintext and does not encrypt credentials or commands. Prefer UART. If you enable Telnet for an isolated development network:
 
-```text
-wifi connect MySSID MyPassword
-```
-
-2. Connect from your computer:
+1. Run `idf.py menuconfig`.
+2. Open **ESP32OS Security and Network Services**.
+3. Enable Telnet and set a non-empty username and password locally.
+4. Rebuild and flash the firmware.
+5. Connect only from a trusted network:
 
 ```bash
 telnet <esp32-ip> 2222
 ```
 
-Default Telnet credentials:
+There are no default credentials. Never commit local `sdkconfig` files or reuse production passwords.
 
-- Username: `admin`
-- Password: `esp32os`
+### Optional Wi-Fi AP fallback
 
-## Access the Portal
-
-Open a web browser and navigate to the URL printed on the serial console at boot (typically `http://192.168.4.1/` if WiFi is not connected, or the board's IP on your network if connected). The portal requires no authentication and provides a graphical dashboard for system diagnostics and control.
+The device-hosted AP fallback is disabled by default. If explicitly enabled in the same menuconfig section, the current fallback AP is open. Do not enable it on an untrusted or production network.
 
 ## Common Shell Commands
 
