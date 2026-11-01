@@ -51,7 +51,7 @@ The core idea is not to replace Linux, but to provide a familiar operational mod
 
 ### What ESP32OS tries to achieve
 
-- Provide a stable command shell over UART and Telnet for development and field maintenance.
+- Provide a stable UART command shell, with optional plaintext Telnet for isolated development networks.
 - Offer a modular service layer (`os_kernel`, `os_fs`, `os_networking`, `os_logging`, `os_drivers`) with clean boundaries.
 - Keep APIs simple so contributors can add drivers and commands quickly.
 - Preserve deterministic embedded behavior using FreeRTOS scheduling and ESP-IDF device support.
@@ -78,7 +78,7 @@ The core idea is not to replace Linux, but to provide a familiar operational mod
 │                     Applications / User Code                     │
 ├─────────────────────────────────────────────────────────────────┤
 │                        Shell (CLI)                               │
-│          UART Session          │       Telnet Session            │
+│          UART Session          │   Optional Telnet Session      │
 ├────────────────────────────────┼────────────────────────────────┤
 │  System Services                                                 │
 │  ┌──────────┐ ┌──────────┐ ┌─────────────┐ ┌────────────────┐  │
