@@ -122,4 +122,5 @@ jobs:
             dist/esp32/
             dist/esp32s3/
             dist/esp32c3/
+            dist/manifest.json
           if-no-files-found: error
