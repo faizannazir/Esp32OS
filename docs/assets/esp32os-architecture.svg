@@ -1,21 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="t d">
-<title id="t">ESP32OS software architecture</title><desc id="d">Layered diagram showing application code, UART shell, optional remote access, modular ESP32OS services, hardware drivers, ESP-IDF, FreeRTOS and ESP32 hardware.</desc>
-<defs><linearGradient id="a" x2="1" y2="1"><stop stop-color="#0d2236"/><stop offset="1" stop-color="#173e50"/></linearGradient></defs>
-<rect width="1200" height="700" rx="24" fill="#f4f8fb"/>
-<text x="600" y="55" text-anchor="middle" fill="#102b3d" font-family="Arial,sans-serif" font-size="28" font-weight="700">ESP32OS SOFTWARE STACK</text>
-<text x="600" y="84" text-anchor="middle" fill="#587184" font-family="Arial,sans-serif" font-size="15">A modular operating environment built on ESP-IDF and FreeRTOS</text>
-<g font-family="Arial,sans-serif" text-anchor="middle">
- <rect x="100" y="118" width="1000" height="65" rx="12" fill="#dcecf5" stroke="#8bb7cc"/><text x="600" y="158" font-size="21" font-weight="700" fill="#163a50">APPLICATIONS / USER CODE</text>
- <rect x="100" y="202" width="1000" height="74" rx="12" fill="#c9e9e4" stroke="#69b8ad"/><text x="600" y="231" font-size="20" font-weight="700" fill="#14564f">INTERACTIVE COMMAND SHELL</text><text x="600" y="255" font-size="14" fill="#286c65">UART console • Optional Telnet (disabled by default)</text>
- <rect x="100" y="295" width="1000" height="160" rx="12" fill="#e4eaf5" stroke="#9caed0"/><text x="600" y="323" font-size="19" font-weight="700" fill="#2a426d">ESP32OS SERVICES</text>
- <g font-size="16" font-weight="700">
-  <rect x="125" y="345" width="220" height="82" rx="9" fill="#fff" stroke="#a9b8d1"/><text x="235" y="379" fill="#25436b">os_kernel</text><text x="235" y="402" font-size="12" font-weight="400" fill="#61738a">Tasks • process control</text>
-  <rect x="365" y="345" width="220" height="82" rx="9" fill="#fff" stroke="#a9b8d1"/><text x="475" y="379" fill="#25436b">os_fs</text><text x="475" y="402" font-size="12" font-weight="400" fill="#61738a">SPIFFS • file commands</text>
-  <rect x="605" y="345" width="220" height="82" rx="9" fill="#fff" stroke="#a9b8d1"/><text x="715" y="379" fill="#25436b">os_networking</text><text x="715" y="402" font-size="12" font-weight="400" fill="#61738a">Wi-Fi • TCP/IP • HTTP</text>
-  <rect x="845" y="345" width="230" height="82" rx="9" fill="#fff" stroke="#a9b8d1"/><text x="960" y="379" fill="#25436b">os_logging</text><text x="960" y="402" font-size="12" font-weight="400" fill="#61738a">Logs • diagnostics</text>
- </g>
- <rect x="100" y="474" width="1000" height="62" rx="12" fill="#fbe9ce" stroke="#e0b56e"/><text x="600" y="511" font-size="19" font-weight="700" fill="#76501c">HARDWARE ABSTRACTION • GPIO • ADC • I²C • SPI • UART</text>
- <rect x="100" y="555" width="1000" height="55" rx="12" fill="#dce8f0" stroke="#9db5c6"/><text x="600" y="589" font-size="19" font-weight="700" fill="#24475c">ESP-IDF PERIPHERAL &amp; NETWORKING APIs</text>
- <rect x="100" y="629" width="490" height="48" rx="10" fill="#d8e8df" stroke="#8bb79d"/><text x="345" y="659" font-size="17" font-weight="700" fill="#285a3b">FreeRTOS kernel</text>
- <rect x="610" y="629" width="490" height="48" rx="10" fill="#dce5f4" stroke="#9daed0"/><text x="855" y="659" font-size="17" font-weight="700" fill="#2c4670">ESP32 / ESP32-S3 / ESP32-C3 hardware</text>
-</g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="690" viewBox="0 0 1200 690" role="img" aria-labelledby="title desc">
+  <title id="title">ESP32OS responsibility map</title>
+  <desc id="desc">Application code, the UART shell and optional remote interfaces use ESP32OS runtime, storage, networking and hardware services. These services build on ESP-IDF and FreeRTOS running on ESP32, S3 or C3 hardware. Groups show responsibilities, not strict dependency isolation.</desc>
+  <rect width="1200" height="690" rx="22" fill="#0e1a28"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="44" y="47" fill="#81ddc6" font-size="12" font-weight="700" letter-spacing="2">INSIDE THE FIRMWARE</text>
+    <text x="44" y="89" fill="#eef2ef" font-size="32" font-weight="700" letter-spacing="-.7">One application. Composable services.</text>
+    <text x="44" y="118" fill="#9eb4c5" font-size="16">FreeRTOS schedules the tasks; ESP32OS makes the system accessible.</text>
+    <rect x="44" y="150" width="1112" height="104" rx="12" fill="#172a3c" stroke="#355069"/>
+    <text x="66" y="178" fill="#88a6bb" font-size="11" letter-spacing="1.5">INTERFACES + APPLICATION CODE</text>
+    <text x="66" y="214" fill="#edf3f2" font-size="21" font-weight="700">Your C components</text>
+    <text x="390" y="214" fill="#edf3f2" font-size="21" font-weight="700">UART shell</text>
+    <text x="690" y="214" fill="#edf3f2" font-size="21" font-weight="700">Browser + Telnet</text>
+    <text x="690" y="237" fill="#9eb4c5" font-size="13">Optional · disabled by default</text>
+    <path d="M600 254V281" stroke="#70c8b6" stroke-width="2"/>
+    <g fill="#132c30" stroke="#326660">
+      <rect x="44" y="281" width="266" height="170" rx="12"/>
+      <rect x="326" y="281" width="266" height="170" rx="12"/>
+      <rect x="608" y="281" width="266" height="170" rx="12"/>
+      <rect x="890" y="281" width="266" height="170" rx="12"/>
+    </g>
+    <g fill="#91e0c9" font-size="20" font-weight="700">
+      <text x="66" y="319">Runtime</text><text x="348" y="319">Storage + logs</text><text x="630" y="319">Connectivity</text><text x="912" y="319">Hardware</text>
+    </g>
+    <g fill="#d2e2e4" font-size="15">
+      <text x="66" y="352">Managed task records</text><text x="66" y="378">Scheduler + timers</text><text x="66" y="404">Queues + event groups</text>
+      <text x="348" y="352">SPIFFS file helpers</text><text x="348" y="378">NVS environment store</text><text x="348" y="404">Recent logs + file sink</text>
+      <text x="630" y="352">Wi-Fi · ping · HTTP</text><text x="630" y="378">MQTT messaging</text><text x="630" y="404">OTA APIs*</text>
+      <text x="912" y="352">GPIO · ADC · PWM</text><text x="912" y="378">I²C · SPI · UART</text><text x="912" y="404">Driver wrappers</text>
+    </g>
+    <path d="M600 451V478" stroke="#70c8b6" stroke-width="2"/>
+    <rect x="44" y="478" width="1112" height="74" rx="12" fill="#172a3c" stroke="#355069"/>
+    <text x="66" y="510" fill="#eef2ef" font-size="22" font-weight="700">ESP-IDF + FreeRTOS</text>
+    <text x="66" y="533" fill="#9eb4c5" font-size="14">Task scheduling · peripheral APIs · lwIP · Wi-Fi stack · NVS · flash partitions</text>
+    <rect x="44" y="568" width="1112" height="49" rx="12" fill="#22323f"/>
+    <text x="600" y="599" text-anchor="middle" fill="#edf3f2" font-size="18" font-weight="700">ESP32 / ESP32-S3 / ESP32-C3</text>
+    <text x="44" y="647" fill="#9eb4c5" font-size="13">* OTA requires an appropriate partition layout; the default uses a single factory application.</text>
+    <text x="44" y="670" fill="#9eb4c5" font-size="13">Responsibility groups, not strict dependency layers. Tasks share the firmware address space.</text>
+  </g>
+</svg>

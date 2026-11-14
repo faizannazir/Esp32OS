@@ -1,263 +1,95 @@
 # Contributing to ESP32OS
 
-Thank you for your interest in contributing! This document covers everything you need to know to submit quality contributions.
+[Documentation](README.md) · [Architecture](ARCHITECTURE.md) · [Testing](TESTING.md)
 
-## Quick Contribution Flow
+Useful contributions include reproducible bug fixes, board validation, peripheral drivers, command improvements, examples and documentation. Keep each pull request focused and explain what a user can do differently after the change.
 
-1. Fork and create a feature branch.
-2. Build for all supported targets (`esp32`, `esp32s3`, `esp32c3`) where toolchain and hardware are available.
-3. Run integration tests on real hardware.
-4. Update docs if behavior or commands changed.
-5. Open a PR to `master`.
+## Set up a change
 
-CI will automatically run on your PR and publish build artifacts for review.
-
----
-
-## Ground Rules
-
-1. **Respect the constraints** — ESP32 has 520 KB RAM. Every byte counts. Justify new allocations.
-2. **No malloc in hot paths** — Use static or stack allocation in interrupt contexts and frequently-called functions.
-3. **Layering** — Components must only `#include` headers from layers below them (see Architecture).
-4. **Thread safety** — All shared state must be protected. Prefer mutexes over disabling interrupts.
-5. **Error propagation** — Never silently swallow `esp_err_t` returns. Log with `OS_LOGE` or return to caller.
-6. **C17 standard** — Use C17 features freely; avoid GNU extensions.
-
----
-
-## Development Setup
+1. Fork the repository and clone your fork.
+2. Open an ESP-IDF 6.0 terminal and change into the checkout.
+3. Create a feature branch from `master`.
+4. Make the change and run the checks relevant to it.
+5. Open a pull request targeting `master`, with results and any untested areas.
 
 ```bash
-# 1. Fork the repo and clone your fork
-git clone https://github.com/<you>/esp32os.git
-cd esp32os
-
-# 2. Install ESP-IDF (if not already)
-git clone --recursive https://github.com/espressif/esp-idf.git ~/esp-idf
-cd ~/esp-idf && ./install.sh esp32
-. ~/esp-idf/export.sh
-
-# 3. Create a feature branch
-git checkout -b feature/my-cool-feature
-
-# 4. Build to verify (repeat for each supported target)
-cd ~/esp32os
+git clone https://github.com/YOUR_USERNAME/Esp32OS.git
+cd Esp32OS
+git switch -c feature/short-description
 idf.py set-target esp32
 idf.py build
-idf.py set-target esp32s3
-idf.py build
-idf.py set-target esp32c3
-idf.py build
-
-# 6. Run hardware integration test
-python3 -m pip install pyserial
-python3 tools/test_integration.py --port /dev/ttyUSB0
+python3 tools/test_build_health.py --target esp32
 ```
 
----
+Replace the repository owner and target as needed. See [installation and flashing](USER_GUIDE.md#build-and-flash) for local setup. Do not commit credentials, local `sdkconfig`, build artifacts or generated dependency folders.
 
-## Code Style
+## Engineering conventions
 
-### Naming Conventions
+- Follow existing C naming: `snake_case` functions, `s_` module state and uppercase constants.
+- Use four-space indentation, braces for control flow and readable, focused functions.
+- Check `esp_err_t`, allocation and task-creation results. Log useful context or propagate the error.
+- Account for constrained memory. Keep buffers bounded, document significant allocations and avoid blocking work in interrupt/timer contexts.
+- Protect shared state deliberately. A component's mutex does not make all its callers or related modules thread-safe.
+- Declare direct CMake dependencies. Check the actual call graph before adding coupling.
+- Use `shell_write()` / `shell_printf()` for command output and `OS_LOG*` for service logs.
+- Keep firmware initialization order explicit and handle partial initialization/cleanup.
 
-| Symbol | Convention | Example |
-|--------|-----------|---------|
-| Function | `snake_case` | `os_kernel_init()` |
-| Global / module state | `s_` prefix | `static s_net` |
-| Constants / macros | `UPPER_SNAKE` | `OS_MAX_PROCESSES` |
-| Types (typedef struct/enum) | `snake_case_t` | `process_t` |
-| Public API header guards | `COMPONENT_FILE_H` | `OS_KERNEL_H` |
+The [extension guide](EXTENDING.md) shows how to register a command, start a service and add a component. Public headers are the source of truth for API signatures.
 
-### File Structure
+## Match validation to the change
 
-Every `.c` file should follow this layout:
-```c
-/* 1. Component includes */
-#include "my_component.h"
-#include "os_logging.h"
+| Change | Expected evidence |
+|---|---|
+| Documentation or images | Check source claims, relative links, examples, rendering and screenshot provenance |
+| Shared firmware | Build and run artifact checks for `esp32`, `esp32s3` and `esp32c3` where available |
+| Shell/env/scheduler behavior | Relevant host-model scenarios plus compiled firmware/device validation |
+| Peripheral or networking code | Board, wiring/network setup, procedure and observed result |
+| Dashboard | Desktop/mobile browser checks, API behavior and device validation where available |
 
-/* 2. ESP-IDF includes */
-#include "freertos/FreeRTOS.h"
-#include ...
+Use [Testing](TESTING.md) for exact commands and current limits. If hardware or a target toolchain is unavailable, say so in the PR. Do not label unrun checks as passing. Repository CI builds firmware and runs host checks; it does not certify connected hardware.
 
-/* 3. Standard library */
-#include <string.h>
-#include <stdio.h>
+## Keep documentation honest
 
-/* 4. Module tag */
-#define TAG "MY_COMP"
+When changing behavior, update the matching guide and help text in the same PR. During this documentation refresh, several claims had drifted from the implementation; use these checks to prevent recurrence:
 
-/* 5. Private types and state (static) */
-static struct { ... } s_state;
+- Verify default behavior against `main/main.c`, `Kconfig.projbuild`, `sdkconfig.defaults` and `partitions.csv`.
+- Link public headers instead of copying large declarations that can go stale.
+- Distinguish implemented code, build coverage and measured hardware behavior.
+- Label screenshots made with sample data; keep the real dashboard HTML as their visual source.
+- Do not claim Linux process isolation, full POSIX filesystem behavior or OTA support from a command name alone.
+- Keep proposed work separate from shipped features. MQTT, PWM, timers, environment storage, scheduled commands and the browser dashboard already exist.
 
-/* 6. Private helper functions (static) */
-static void helper(void) { ... }
+For screenshot maintenance, see [Visual assets](assets/README.md).
 
-/* 7. Public API implementations */
-esp_err_t my_component_init(void) { ... }
+## Pull request checklist
+
+- [ ] Explain the concrete problem and resulting behavior.
+- [ ] Scope changes to the intended feature or fix.
+- [ ] Update relevant help, documentation and examples.
+- [ ] Check public API errors, resource ownership and memory impact.
+- [ ] Run applicable checks and include their results.
+- [ ] State target, board and wiring for hardware evidence.
+- [ ] List checks that could not be run and known limitations.
+- [ ] Remove credentials and private data from fixtures, screenshots and logs.
+
+The [PR workflow](../.github/workflows/pr-checks.yml) builds and publishes review artifacts. After changes reach `master`, the [release workflow](../.github/workflows/master-release.yml) verifies reusable PR artifacts or rebuilds, then publishes release bundles.
+
+## Commit messages
+
+Use a short component-oriented subject, with a body when the reason needs explanation:
+
+```text
+os_shell: report invalid arguments for scheduled commands
+os_networking: handle reconnect failure explicitly
+docs: clarify default partition and OTA requirements
 ```
 
-### Formatting
+## Good areas to improve
 
-- 4-space indentation (no tabs)
-- Max line length: 100 characters
-- Opening brace on same line: `if (cond) {`
-- Always use braces even for single-line bodies
-- Group related blank lines, but don't over-space
+- Reproduce and fix filesystem directory semantics or document alternative storage choices.
+- Add measured board/peripheral validation and target-specific examples.
+- Improve browser command capture and remote-interface access control.
+- Validate an OTA-capable flash layout and recovery procedure.
+- Expand tests that exercise the actual C implementation.
 
----
-
-## Adding a New Shell Command
-
-1. Create your handler:
-```c
-static int cmd_mycommand(int fd, int argc, char **argv)
-{
-    if (argc < 2) {
-        shell_write(fd, "Usage: mycommand <arg>\r\n");
-        return SHELL_CMD_ERROR;
-    }
-    shell_printf(fd, "You said: %s\r\n", argv[1]);
-    return SHELL_CMD_OK;
-}
-```
-
-2. Register in `shell_commands.c` inside `shell_commands_register_all()`:
-```c
-static const shell_command_t cmd = SHELL_CMD_ENTRY(
-    "mycommand",
-    "Short description",
-    "mycommand <arg>",
-    cmd_mycommand
-);
-shell_register_command(&cmd);
-```
-
-3. Alternatively, register from your own component's init function if you want to keep commands co-located with their feature.
-
----
-
-## Adding a New Component
-
-1. Create the directory structure:
-```
-components/my_feature/
-├── CMakeLists.txt
-├── include/
-│   └── my_feature.h
-└── src/
-    └── my_feature.c
-```
-
-2. Write `CMakeLists.txt`:
-```cmake
-idf_component_register(
-    SRCS "src/my_feature.c"
-    INCLUDE_DIRS "include"
-    REQUIRES os_logging freertos
-)
-```
-
-3. Add to `main/CMakeLists.txt` REQUIRES list.
-
-4. Write a `#pragma once` header with documented public API.
-
-5. Use `OS_LOGI/LOGW/LOGE/LOGD(TAG, ...)` for all log output.
-
----
-
-## Adding a New Hardware Driver
-
-Drivers belong in `components/os_drivers/`.
-
-1. Add the public API to `os_drivers.h`:
-```c
-/* My new sensor */
-esp_err_t my_sensor_init(int pin);
-int       my_sensor_read(void);   // returns value or -1 on error
-```
-
-2. Implement in a new file `src/my_sensor.c`.
-
-3. Register any CLI commands via `shell_register_command()` in your `_init()` function or in `shell_commands.c`.
-
-4. Add `my_sensor.c` to the `SRCS` list in `os_drivers/CMakeLists.txt`.
-
----
-
-## Pull Request Checklist
-
-Before opening a PR, verify:
-
-- [ ] `idf.py build` succeeds with no warnings (`-Werror` is set)
-- [ ] Build succeeds for supported targets: `esp32`, `esp32s3`, and `esp32c3`
-- [ ] New public functions are documented in the header
-- [ ] Existing API is not broken (no removal of public symbols)
-- [ ] Memory usage impact is documented (if significant)
-- [ ] New commands are added to the table in `README.md`
-- [ ] Relevant test cases added/updated in `docs/TESTING.md`
-- [ ] `tools/test_integration.py` passes on at least one real board
-- [ ] No magic numbers — all constants have named `#define`s
-- [ ] Static analysis: `idf.py clang-check` passes (if available)
-- [ ] Stack size is sufficient and documented for new tasks
-
-## CI Behavior
-
-- PR to `master`: `.github/workflows/pr-checks.yml` runs build and sanity checks.
-- Push to `master`: `.github/workflows/master-release.yml` builds, tags, and publishes release artifacts.
-
----
-
-## Commit Message Format
-
-```
-component: short description (max 72 chars)
-
-Optional body explaining WHY the change was made, not WHAT.
-Reference issues: Fixes #42
-```
-
-Examples:
-```
-os_shell: add tab-completion for command names
-os_networking: fix reconnect race condition on rapid disconnect
-os_fs: increase OS_FS_PATH_MAX to 256 for deeper paths
-docs: add I2C wiring diagram to COMPONENTS.md
-```
-
----
-
-## Review Process
-
-1. Open PR with description of change and motivation
-2. At least one maintainer review required
-3. All CI checks must pass
-4. Address all review comments
-5. Squash commits if asked
-
----
-
-## Roadmap / Ideas for Contribution
-
-- [ ] `cron` — scheduled task runner using FreeRTOS timers
-- [ ] `env` — environment variable subsystem (NVS-backed)
-- [ ] `script` — simple line-by-line shell script execution
-- [ ] MQTT client command (`mqtt pub/sub`)
-- [ ] OTA update command (`ota update <url>`)
-- [ ] Modbus RTU driver
-- [ ] PWM driver and `pwm` shell command
-- [ ] mDNS hostname registration
-- [ ] SD card driver (SDMMC) and mount command
-- [ ] Web-based terminal (WebSocket + xterm.js)
-- [ ] Encrypted NVS support
-- [ ] Per-session environment variables
-- [ ] `grep` — search file contents from shell
-- [ ] `tail -f` — follow log file in real time
-
----
-
-## Community
-
-- **Issues:** Bug reports, feature requests → GitHub Issues
-- **Discussions:** Design questions → GitHub Discussions
-- **Security vulnerabilities:** Email maintainers directly (do not open public issues)
+Discuss broad architectural changes before implementation. Include a reproducible scenario and the constraints your approach addresses.

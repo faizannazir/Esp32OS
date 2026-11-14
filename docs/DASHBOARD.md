@@ -1,90 +1,101 @@
-# ESP32OS Browser Dashboard
+# Browser dashboard
 
-ESP32OS includes an optional browser-based device dashboard served directly by the ESP32. It complements the UART shell; it does not replace it or require a cloud service.
+[Documentation](README.md) · [User Guide](USER_GUIDE.md) · [API](#http-api)
 
-## What it provides
+The optional ESP32OS dashboard is served directly by the device. Its HTML, CSS and JavaScript are bundled into the firmware; there are no external frontend libraries or cloud services to configure.
 
-- Live heap, CPU-load, uptime and process-count metrics.
-- A rolling free-heap telemetry chart.
-- A process table with suspend, resume and terminate actions.
-- A browser terminal that executes existing ESP32OS shell commands.
-- Wi-Fi station connection, IP address and gateway status.
-- OTA confirmation and rollback controls.
-- Device reboot control.
+## Enable and connect
 
-## Enable the dashboard
+The portal is **disabled by default** and has no authentication. Use only on an isolated, trusted development network.
 
-The web portal is disabled by default. It currently has no authentication and exposes powerful device-control endpoints. Enable it only on a trusted, isolated development network.
-
-1. Connect to the board over UART.
-2. Run `idf.py menuconfig` in the project directory.
-3. Open **ESP32OS Security and Network Services**.
-4. Enable the web portal option.
-5. Save the configuration, rebuild and flash the firmware.
-6. Connect the board to a trusted Wi-Fi network using the UART shell.
-7. Open the board's station IP address in a browser on the same network.
+1. In the project directory, run `idf.py menuconfig`.
+2. Open **ESP32OS Security and Network Services** and enable the web control portal (`CONFIG_ESP32OS_ENABLE_WEB_PORTAL`).
+3. Save, rebuild and flash.
+4. Use UART to join Wi-Fi, then read the station IP with `wifi status`.
+5. Open `http://<board-ip>/` from a browser on the same network.
 
 ```bash
-idf.py menuconfig
 idf.py build
 idf.py -p /dev/ttyUSB0 flash monitor
 ```
 
-## Dashboard previews
+At the device prompt, substitute your local credentials:
 
-These repository-hosted SVG previews illustrate the desktop and narrow-screen layouts. They are design previews, not photographs or captures from a physical ESP32 board.
+```text
+wifi connect "Your SSID" "Your password"
+wifi status
+```
 
-![ESP32OS desktop dashboard preview](assets/dashboard-desktop-preview.svg)
+The web portal and Telnet are separate options; you do not need to enable Telnet or the open AP to use the dashboard.
 
-![ESP32OS mobile dashboard preview](assets/dashboard-mobile-preview.svg)
+## Screenshots
 
-![ESP32OS dashboard settings preview](assets/dashboard-settings-preview.svg)
+These are browser captures of the actual [bundled dashboard](../components/webportal/dashboard/index.html), populated with **sample API responses**. They are not captures from a physical ESP32. Values, task rows and addresses illustrate the interface, not measured performance. See [asset provenance](assets/README.md).
 
-## Personalize your dashboard
+### Desktop
 
-Select **Settings** in the dashboard header to customize the browser view:
+![ESP32OS dashboard at desktop width with sample status, heap history and managed processes](assets/dashboard-desktop.png)
 
-- **Dashboard title:** set a heading that identifies your board or project.
-- **Appearance:** choose dark, light or follow the operating system preference.
-- **Accent color:** choose mint, blue, violet or amber.
-- **Layout density:** use comfortable spacing or a compact layout.
-- **Auto-refresh:** choose 3, 5, 10 or 30 seconds, or disable automatic refresh for manual-only updates.
-- **Panel visibility:** show or hide metric cards, telemetry chart, process table, command terminal and device controls.
+### Mobile
 
-Select **Save preferences** to apply and save choices in this browser using local storage. **Reset defaults** restores the original dashboard layout. Preferences are browser-specific: they are not sent to the ESP32, do not modify firmware settings and are not shared with other users or browsers. Clearing this browser's site data resets them.
+<p align="center"><img src="assets/dashboard-mobile.png" width="390" alt="Actual ESP32OS dashboard mobile overview with sample metrics and telemetry"></p>
 
-## Security warning
+### Preferences
 
-The dashboard is a management interface, not a hardened remote administration service. It currently has no login, session authentication, TLS, CSRF protection or role-based authorization. Its endpoints can execute shell commands, manage tasks, confirm or roll back firmware, and reboot the device.
+![Actual ESP32OS dashboard settings dialog](assets/dashboard-settings.png)
 
-- Do not expose the portal to the public internet.
-- Do not enable it on shared, guest or otherwise untrusted Wi-Fi.
-- Prefer UART access for production devices.
-- Keep the portal disabled in production firmware unless a secured access layer has been added and reviewed.
+## Use the panels
 
-## Current API surface
+| Panel | Behavior |
+|---|---|
+| Metrics | Free heap, approximate CPU load, uptime, managed process count and network status |
+| Telemetry | A rolling chart of free heap from the device's recent samples |
+| Processes | Managed task snapshots with Pause, Resume and Stop actions |
+| Command terminal | Submits a command string and displays its captured response |
+| Device controls | Read-only Wi-Fi status, memory details, OTA state and reboot/OTA actions |
 
-| Method | Endpoint | Purpose |
+Process controls affect real device tasks. The process table does not represent every ESP-IDF internal task. Use UART as a recovery interface when experimenting with task control.
+
+OTA buttons reflect reported state. The default partition table contains no OTA slots; see [OTA prerequisites](USER_GUIDE.md#ota-prerequisites) before expecting update confirmation or rollback to be available.
+
+## Command capture limits
+
+The command panel is a request/response form, not a streaming UART emulator. The server runs `shell_execute_capture()` with a bounded output buffer. Handlers that use `shell_write()` or `shell_printf()` participate in capture; some component printers write directly to UART or sockets and can bypass it. Long output can be truncated, and commands waiting for interactive input are unsuitable here.
+
+Use a simple command such as `echo hello` to check the round trip. If a command reports no text, try the UART shell before assuming it failed. Use UART for boot logs and interactive debugging.
+
+## Personalize the view
+
+Select **Settings** to change the dashboard title, dark/light/system appearance, mint/blue/violet/amber accent, comfortable/compact spacing, automatic refresh (3, 5, 10 or 30 seconds, or manual), and visible panels.
+
+**Save preferences** stores choices in this browser's local storage. **Reset defaults** fills the default choices; save to persist them. Preferences do not change firmware, Wi-Fi configuration or another browser's view. Clearing site data resets saved preferences.
+
+The default refresh interval is five seconds. Device telemetry is independently sampled every five seconds into a 24-entry RAM ring. Changing browser refresh does not change sampling frequency; history is lost on reboot.
+
+## HTTP API
+
+The implementation lives in [`webportal.c`](../components/webportal/src/webportal.c).
+
+| Method | Endpoint | Purpose / request body |
 |---|---|---|
-| GET | `/` | Embedded dashboard page |
-| GET | `/api/status` | Heap, CPU, uptime and network status |
+| GET | `/` | Embedded HTML dashboard |
+| GET | `/api/status` | Heap, approximate CPU, uptime and network status |
 | GET | `/api/processes` | Managed process list |
 | GET | `/api/telemetry/history` | Recent system samples |
-| GET | `/api/process/history?pid=...` | History for one process |
-| GET | `/api/ota` | OTA confirmation and rollback state |
-| POST | `/api/process/action` | Suspend, resume or terminate a process |
-| POST | `/api/command` | Execute an ESP32OS shell command |
-| POST | `/api/ota/confirm` | Confirm the running OTA image |
-| POST | `/api/ota/rollback` | Roll back to the previous image |
+| GET | `/api/process/history?pid=...` | Recent samples for a managed process |
+| GET | `/api/ota` | Confirmation and rollback availability |
+| POST | `/api/process/action` | Body `pid=<id>&action=<suspend\|resume\|kill>` |
+| POST | `/api/command` | Plain-text shell command |
+| POST | `/api/ota/confirm` | Confirm the running image when supported |
+| POST | `/api/ota/rollback` | Request rollback when supported |
 | POST | `/api/system/reboot` | Restart the device |
 
-## Implementation notes
+The dashboard sends POST bodies with `Content-Type: text/plain`, including the form-like process-action body. Status/history endpoints return JSON; command and action endpoints return text. The process-history API exists even though the current page charts system free heap only. There is no Wi-Fi configuration form; use UART commands.
 
-- The dashboard is a standalone HTML asset embedded into the firmware by ESP-IDF CMake; it does not download JavaScript libraries or depend on a hosted frontend.
-- The page uses the existing web portal API, so UART shell commands remain available independently.
-- Dashboard telemetry is sampled by the existing portal sampler. Data is held in a bounded in-memory ring buffer and is lost on reboot.
-- Network information is currently read-only in the dashboard. Use the UART shell for Wi-Fi configuration.
+## Security boundary
 
-## Future hardening
+The current portal has no login, authenticated session, TLS, CSRF protection or role-based authorization. Anyone who can reach it may be able to execute shell commands and control the device. Do not expose it to the internet, guest Wi-Fi or other untrusted clients. Keep it disabled for deployments until an appropriate secured access layer has been implemented and reviewed.
 
-Before enabling this interface in production, add authenticated sessions, TLS or a trusted reverse-proxy boundary, CSRF protection, per-endpoint authorization, rate limiting and audit logging. OTA confirmation, rollback, reboot and process termination should require explicit authorization.
+## Troubleshooting
+
+If the dashboard says the device is unavailable, check power, Wi-Fi status, the current station IP and the portal-enabled firmware configuration. If a reboot changes the DHCP address, reopen the page at the new IP. If a panel is missing, inspect Settings. If a command has no output, see [capture limits](#command-capture-limits).
