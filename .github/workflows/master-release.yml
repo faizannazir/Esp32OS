@@ -100,9 +100,30 @@ jobs:
           # Trust only this job workspace, not every repository on the runner.
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           EXPECTED_TREE="$(git rev-parse HEAD^{tree})"
-          ARTIFACT_TREE="$(jq -r '.source_tree_sha // empty' dist/manifest.json 2>/dev/null || true)"
-          if [ -z "$ARTIFACT_TREE" ] || [ "$ARTIFACT_TREE" != "$EXPECTED_TREE" ]; then
-            echo "Artifact source tree does not match the merged tree; a source build will run."
+          if ! python3 - "$EXPECTED_TREE" <<'PYTHON'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          try:
+              manifest = json.loads(Path("dist/manifest.json").read_text())
+              commit = manifest["source_commit_sha"]
+              tree = manifest["source_tree_sha"]
+              if not all(isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value)
+                         for value in (commit, tree)):
+                  raise ValueError("invalid Git object IDs")
+          except (KeyError, OSError, TypeError, ValueError):
+              raise SystemExit("PR artifact has missing or invalid provenance.")
+
+          print(f"Expected merged tree: {sys.argv[1]}")
+          print(f"Artifact source commit: {commit}")
+          print(f"Artifact source tree: {tree}")
+          if tree != sys.argv[1]:
+              raise SystemExit("PR artifact tree does not match the merged tree.")
+          PYTHON
+          then
+            echo "::warning::PR artifact provenance verification failed; rebuilding from source."
             rm -rf dist && mkdir -p dist
             exit 0
           fi
