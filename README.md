@@ -2,329 +2,148 @@
 
 # ESP32OS
 
-### A Linux-style command environment for ESP32 microcontrollers.
+**A small board. A familiar shell. A system you can inspect.**
 
-**Build, inspect and control embedded systems with a modular C17 runtime, FreeRTOS task management and an interactive shell.**
+An open-source embedded operating environment for ESP32, built on ESP-IDF and FreeRTOS.
 
-[![ESP-IDF 6.0](https://img.shields.io/badge/ESP--IDF-6.0-E7352C?logo=espressif&logoColor=white)](https://github.com/espressif/esp-idf)
-[![Targets](https://img.shields.io/badge/Targets-ESP32%20%7C%20S3%20%7C%20C3-168B75)](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/)
-[![Language](https://img.shields.io/badge/Language-C17-00599C?logo=c)](https://en.cppreference.com/w/c/17)
-[![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-3C873A)](https://www.freertos.org/)
-[![License](https://img.shields.io/badge/License-MIT-F2C94C)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/faizannazir/Esp32OS?style=social)](https://github.com/faizannazir/Esp32OS/stargazers)
-[![Forks](https://img.shields.io/github/forks/faizannazir/Esp32OS?style=social)](https://github.com/faizannazir/Esp32OS/network/members)
-[![CI](https://img.shields.io/github/actions/workflow/status/faizannazir/Esp32OS/pr-checks.yml?label=CI)](https://github.com/faizannazir/Esp32OS/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/faizannazir/Esp32OS/pr-checks.yml?label=firmware%20CI)](https://github.com/faizannazir/Esp32OS/actions/workflows/pr-checks.yml)
+[![ESP-IDF](https://img.shields.io/badge/ESP--IDF-6.0-E7352C)](https://docs.espressif.com/projects/esp-idf/en/v6.0/esp32/get-started/)
+[![Targets](https://img.shields.io/badge/targets-ESP32%20%C2%B7%20S3%20%C2%B7%20C3-257D73)](#hardware-and-build-support)
+[![License: MIT](https://img.shields.io/badge/license-MIT-55657D)](LICENSE)
 
-[Explore features](#-features) · [Get started](#-quick-start) · [Commands](#-shell-at-a-glance) · [Contribute](#-contributing)
+[Get started](#get-started) · [Dashboard](#the-device-in-your-browser) · [Documentation](docs/README.md) · [Contribute](docs/CONTRIBUTING.md)
+
+<img src="docs/assets/esp32os-hero.svg" alt="ESP32OS: UART shell, device services and optional browser dashboard, built on ESP-IDF and FreeRTOS" width="100%">
 
 </div>
 
-<p align="center">
-  <img src="docs/assets/esp32os-hero.svg" alt="ESP32OS concept illustration: an ESP32 development board connected to sensors with the ESP32OS command shell running" width="100%">
-</p>
+ESP32OS turns an ESP32 development board into an interactive embedded system. Flash one firmware image, open the UART console, and inspect tasks, work with files, connect to Wi-Fi, or control peripherals through a Linux-style command line. Add your own C components and managed FreeRTOS tasks as your project grows.
 
-> **What is ESP32OS?** ESP32OS is an open-source embedded operating environment built on ESP-IDF and FreeRTOS. It brings a familiar Linux-style shell, task and process controls, filesystem commands, networking tools, hardware access and modular services to ESP32-class microcontrollers. It is not a Linux distribution and does not replace the underlying FreeRTOS kernel.
+**FreeRTOS provides the real-time kernel. ESP32OS adds the shell, task-management APIs, services and device dashboard.** It is not a Linux distribution: there is no separate process address space, package manager or desktop application runtime.
 
----
+## What you can do
 
-## ✨ Features
+| Capability | Available today |
+|---|---|
+| **Inspect the system** | Uptime, heap statistics, managed task list, task controls and recent logs |
+| **Use the shell** | UART console, line editing, history, quoted arguments, variable expansion and extensible commands |
+| **Work with flash storage** | SPIFFS file read/write/append/rename operations; NVS-backed environment variables |
+| **Connect your device** | Wi-Fi station management, ICMP ping, HTTP GET and MQTT publish/subscribe |
+| **Control hardware** | GPIO, ADC, I²C and PWM commands; SPI and additional UART APIs |
+| **Run background work** | One-shot and repeating commands, software timers, message queues and event groups |
+| **Open a device dashboard** | Optional browser view of metrics, telemetry, managed processes and device controls |
 
-<table>
-<tr>
-<td width="50%">
-<h3>⌨️ Interactive shell</h3>
-UART command line, command history, ANSI output, extensible commands and a customizable browser dashboard.
-</td>
-<td width="50%">
-<h3>🧠 Task & process tools</h3>
-Inspect, suspend, resume and terminate managed tasks. Check uptime, heap and runtime state.
-</td>
-</tr>
-<tr>
-<td>
-<h3>📁 Embedded filesystem</h3>
-SPIFFS-backed file commands for browsing, reading, writing, moving and removing files.
-</td>
-<td>
-<h3>📡 Wi-Fi & networking</h3>
-Scan and connect to Wi-Fi, inspect connection status, ping hosts and make HTTP requests.
-</td>
-</tr>
-<tr>
-<td>
-<h3>🔌 Hardware access</h3>
-Shell commands for GPIO, ADC and I²C, with a modular driver layer for peripheral expansion.
-</td>
-<td>
-<h3>⚙️ Modular services</h3>
-PWM, timers, IPC, MQTT, OTA, environment variables and scheduled/background commands.
-</td>
-</tr>
-<tr>
-<td>
-<h3>📋 Logging & diagnostics</h3>
-Multi-level logs, in-memory ring buffer, filesystem logging and watchdog integration.
-</td>
-<td>
-<h3>🛡️ Safer defaults</h3>
-UART-first access. Optional AP fallback, Telnet and the unauthenticated web portal are disabled by default.
-</td>
-</tr>
-</table>
+The default firmware starts with local UART access. The web portal, Telnet and open Wi-Fi AP are opt-in. See [network access](docs/USER_GUIDE.md#network-access) before enabling them.
 
-## 🧩 How it fits together
+## The device in your browser
 
-<p align="center">
-  <img src="docs/assets/esp32os-architecture.svg" alt="ESP32OS layered architecture: applications, shell, modular services, hardware abstraction, ESP-IDF, FreeRTOS and ESP32 targets" width="100%">
-</p>
+The ESP32 serves the device console directly. Use the sidebar to switch between the overview, terminal, managed processes, Wi-Fi, and system controls. The Wi-Fi screen lists nearby networks and lets you join one. In Settings, choose which overview widgets appear and reorder them. No cloud account or frontend build step is required.
 
-ESP32OS is a service layer above ESP-IDF and FreeRTOS. The shell provides a consistent operator interface while components keep kernel, filesystem, networking, logging and hardware responsibilities separate.
+![Live ESP32OS dashboard in Safari with readings from the physical ESP32](docs/assets/dashboard-live-desktop.jpg)
 
-## 🎯 Supported targets
+*Captured from an ESP32-D0WD-V3 with 4 MB flash connected to Wi-Fi. See the [browser terminal and settings captures](docs/DASHBOARD.md#live-screenshots).*
 
-| ESP-IDF target | Chip family | CI build |
-|---|---|---|
-| `esp32` | Original ESP32 | [![CI](https://img.shields.io/badge/CI-enabled-success)](https://github.com/faizannazir/Esp32OS/actions) |
-| `esp32s3` | ESP32-S3 | [![CI](https://img.shields.io/badge/CI-enabled-success)](https://github.com/faizannazir/Esp32OS/actions) |
-| `esp32c3` | ESP32-C3 | [![CI](https://img.shields.io/badge/CI-enabled-success)](https://github.com/faizannazir/Esp32OS/actions) |
+> The portal is disabled by default and has no authentication. Enable it only on an isolated development network. Its command form is request/response based; output capture is limited to handlers that use the shell output helpers. [Setup and limitations →](docs/DASHBOARD.md)
 
-Build coverage does not mean every board variant or peripheral has been physically tested. Check the issues and release notes for board-specific status.
+## Get started
 
-## 🚀 Quick start
+![Computer connected to ESP32 UART0 through a USB data cable](docs/assets/usb-uart-connection.svg)
 
-### Requirements
+Connect the board over USB and find its serial port. For an already flashed board, open the console at **115200 baud**. See [USB and terminal setup](docs/USER_GUIDE.md#connect-over-usb-and-open-the-terminal) for macOS, Linux and Windows.
 
-- ESP-IDF **6.0** toolchain (the project CI uses the Espressif ESP-IDF 6.0 container)
-- Python 3.8 or newer for host-side test tools
-- A supported ESP32 development board and USB data cable
-- USB serial drivers and a serial terminal
 
-### 1. Clone the repository
+You need a supported development board with **at least 4 MB flash**, a USB data cable, access to **UART0**, and the **ESP-IDF 6.0** toolchain. Use the Python environment supplied by ESP-IDF. Follow the [official installation guide](https://docs.espressif.com/projects/esp-idf/en/v6.0/esp32/get-started/) if the toolchain is not installed.
+
+In an ESP-IDF terminal:
 
 ```bash
 git clone https://github.com/faizannazir/Esp32OS.git
 cd Esp32OS
-```
 
-### 2. Activate ESP-IDF
-
-```bash
+# Linux/macOS: activate an existing ESP-IDF installation if needed.
 . "$IDF_PATH/export.sh"
-```
 
-If ESP-IDF is not installed yet, follow the [official ESP-IDF installation guide](https://docs.espressif.com/projects/esp-idf/en/v6.0/esp32/get-started/).
-
-### 3. Select a chip and build
-
-Choose the target that matches your physical board:
-
-```bash
-idf.py set-target esp32       # Original ESP32
-# idf.py set-target esp32s3   # ESP32-S3
-# idf.py set-target esp32c3   # ESP32-C3
-
+# Choose the chip on your board: esp32, esp32s3 or esp32c3.
+idf.py set-target esp32
 idf.py build
-```
 
-### 4. Flash and open the serial console
-
-Replace the port with the one assigned to your board:
-
-```bash
+# Replace this port with your board's serial port.
 idf.py -p /dev/ttyUSB0 flash monitor
 ```
 
-On macOS, the port may look like `/dev/cu.usbserial-XXXX`. The default console baud rate is **115200**.
+On macOS, a USB-to-UART port may be `/dev/cu.usbserial-XXXX`; on Windows, use a port such as `COM3` in the ESP-IDF terminal. The console uses **115200 baud**. A board's native USB port may not expose the firmware's UART0 shell; check the board wiring.
 
-When the firmware starts, use the shell prompt:
+At the `esp32os>` prompt, try these commands one at a time:
 
 ```text
-ESP32OS Embedded OS
-Type 'help' for commands
-
-esp32os> help
-esp32os> uname -a
-esp32os> free
-esp32os> ps
+help
+uname -a
+free
+ps
+write /hello.txt "Hello from ESP32OS"
+cat /hello.txt
+export DEVICE_NAME=bench
+printenv DEVICE_NAME
 ```
 
-## 🖥️ Interactive browser dashboard
-
-ESP32OS also includes an optional browser dashboard served directly from the device. Monitor heap, CPU load, uptime, processes and Wi-Fi status; inspect telemetry; manage tasks; and use the shell from a browser.
-
-<p align="center"><strong>Desktop dashboard preview</strong></p>
-
-<p align="center"><img src="docs/assets/dashboard-desktop-preview.svg" alt="ESP32OS desktop dashboard preview showing live system metrics, heap telemetry, process management, command terminal and network controls" width="100%"></p>
-
-<p align="center"><strong>Responsive mobile layout preview</strong></p>
-
-<p align="center"><img src="docs/assets/dashboard-mobile-preview.svg" alt="ESP32OS responsive mobile dashboard preview with metric cards, telemetry and device controls" width="78%"></p>
-
-<p align="center"><strong>Dashboard preferences</strong></p>
-
-<p align="center"><img src="docs/assets/dashboard-settings-preview.svg" alt="ESP32OS dashboard settings preview showing theme, accent, density, refresh interval and panel visibility preferences" width="85%"></p>
-
-Personalize the dashboard from **Settings**: choose dark, light or system appearance; select an accent color; switch between comfortable and compact density; set automatic refresh from 3 to 30 seconds or manual refresh; change the page heading; and show or hide individual panels. Preferences are stored locally in the browser and do not alter firmware or network configuration.
-
-See the [Browser Dashboard guide](docs/DASHBOARD.md) for setup, customization and security details.
-
-## 🖥️ See the shell in action
-
-The following is an illustrative terminal session. Actual memory values, chip names and available commands depend on the board and firmware configuration.
+On the tested ESP32-D0WD-V3 board, the UART console reported:
 
 ```text
 esp32os> uname -a
-ESP32OS  ESP32-S3  WiFi  ESP-IDF
-
-esp32os> free
-Heap:       total        used        free
-            334684      116600      218084
-
-esp32os> wifi status
-Wi-Fi station status and network details
-
-esp32os> ps
-PID     NAME             STATE
-1       sys_monitor      Running
-2       idle             Ready
+esp32os ESP32  WiFi  IDF-v6.0  2 core(s)  Flash:4MB
 ```
 
-## 🧰 Shell at a glance
+Results vary by board and firmware configuration. Continue with the [User Guide](docs/USER_GUIDE.md) for networking, scheduling and troubleshooting.
 
-| Area | Example commands | What they do |
+## Hardware and build support
+
+| Chip | ESP-IDF target | Repository CI |
 |---|---|---|
-| System | `help`, `uname -a`, `uptime`, `free`, `reboot` | System information and control |
-| Processes | `ps`, `top`, `kill`, `suspend`, `resume` | Inspect and manage tasks |
-| Files | `ls`, `cd`, `pwd`, `cat`, `write`, `rm`, `mkdir`, `df` | Work with the SPIFFS filesystem |
-| Wi-Fi | `wifi scan`, `wifi connect`, `wifi status` | Discover and manage networks |
-| Network | `ping`, `http`, `ifconfig` | Basic network diagnostics |
-| Hardware | `gpio`, `adc`, `i2c` | Inspect and control supported peripherals |
-| Logs | `dmesg`, `loglevel`, `logfile` | Review system logs |
-| Environment | `env`, `export`, `unset`, `printenv` | Manage runtime variables |
-| Scheduling | `run`, `at`, `every`, `jobs`, `killjob` | Run commands asynchronously |
-| Feature modules | `pwm`, `timer`, `msgq`, `event`, `mqtt`, `ota` | Use optional service modules |
+| ESP32 | `esp32` | Firmware build and artifact checks |
+| ESP32-S3 | `esp32s3` | Firmware build and artifact checks |
+| ESP32-C3 | `esp32c3` | Firmware build and artifact checks |
 
-For complete syntax and examples, see the [User Guide](docs/USER_GUIDE.md) and [Components Reference](docs/COMPONENTS.md).
+The [PR workflow](.github/workflows/pr-checks.yml) uses `espressif/idf:v6.0`. Build coverage is not hardware certification: validate serial routing, flash capacity, pin assignments and peripherals on your exact board.
 
-## 🔐 Security defaults
+## How it fits together
 
-ESP32OS is configured to prefer local UART access:
+![ESP32OS responsibility map showing interfaces, services, ESP-IDF and FreeRTOS, and the ESP32 hardware](docs/assets/esp32os-architecture.svg)
 
-- **Wi-Fi AP fallback:** disabled by default. If explicitly enabled, the current fallback AP is open.
-- **Telnet shell:** disabled by default. If enabled, Telnet sends credentials and commands in plaintext.
-- **Web control portal:** disabled by default. The portal currently has no authentication and exposes device-control functionality.
+The application entry point initializes components and starts the shell and monitor. Commands call component APIs; FreeRTOS schedules the underlying tasks. The diagram groups responsibilities, rather than promising a strict dependency hierarchy. See [Architecture](docs/ARCHITECTURE.md) for startup, memory and concurrency details.
 
-Only enable these options on an isolated development network after understanding the risks. Configure them locally through:
+## Current boundaries
 
-```bash
-idf.py menuconfig
-```
+- **Tasks share memory.** ESP32OS process IDs identify managed FreeRTOS tasks, not isolated operating-system processes. `ps` is not a complete list of ESP-IDF's internal tasks.
+- **SPIFFS is a flat filesystem.** Directory commands exist, but marker files do not provide full POSIX directory behavior. Start with root-level file paths.
+- **OTA needs a different flash layout.** The code includes OTA commands and APIs, but the shipped partition table has one factory application and no OTA slots or `otadata` partition. Updates and rollback need an appropriate layout and configuration.
+- **Remote management is for development.** Telnet is plaintext and the HTTP portal is unauthenticated. Both are disabled by default.
+- **Shell compatibility is limited.** Familiar command names do not imply Bash syntax, pipes, redirection, executable loading or Unix permissions.
 
-Look for **ESP32OS Security and Network Services**. Do not commit local `sdkconfig` files or credentials. Do not expose unauthenticated management interfaces to the internet or an untrusted LAN.
+## Develop and verify
 
-## 🧪 Tests and continuous integration
-
-The GitHub Actions pull-request workflow builds firmware for ESP32, ESP32-S3 and ESP32-C3, runs host-side test-harness checks and validates build health. The master workflow builds the same targets and publishes firmware artifacts when its release job completes.
-
-Run the host-side checks locally:
+Run the offline command-model checks without a board:
 
 ```bash
-python3 -m py_compile tools/test_integration.py
-python3 -m py_compile tools/test_shell_host_integration.py
-python3 -m py_compile tools/test_build_health.py
 python3 tools/test_shell_host_integration.py
 ```
 
-After building a target, validate its build artifacts:
+This checks a Python model of environment and scheduling commands, not the compiled C firmware. After an ESP-IDF build, check the generated artifacts:
 
 ```bash
 python3 tools/test_build_health.py --target esp32
 ```
 
-Hardware integration tests require a connected board:
+Serial integration tests and the built-in feature suites need hardware. See [Testing](docs/TESTING.md) for commands, side effects and coverage. [Actions](https://github.com/faizannazir/Esp32OS/actions) shows actual run results; [Releases](https://github.com/faizannazir/Esp32OS/releases) contains published artifacts.
 
-```bash
-python3 -m pip install pyserial
-python3 tools/test_integration.py --port /dev/ttyUSB0
-```
+## Documentation
 
-See [Testing](docs/TESTING.md) for the full test strategy. Browse [Actions](https://github.com/faizannazir/Esp32OS/actions) and [Releases](https://github.com/faizannazir/Esp32OS/releases) for current run results and downloadable firmware.
-
-## 🗂️ Project layout
-
-```text
-Esp32OS/
-├── main/                  # Application entry point and startup sequence
-├── components/
-│   ├── os_kernel/         # Task and process management
-│   ├── os_fs/             # Filesystem abstraction
-│   ├── os_networking/     # Wi-Fi and network services
-│   ├── os_logging/        # Logging and diagnostics
-│   ├── os_drivers/        # GPIO, ADC, I2C and peripheral drivers
-│   ├── os_hal/            # Hardware abstraction layer
-│   ├── os_shell/          # Shell engine and built-in commands
-│   └── webportal/         # Optional web control portal
-├── docs/                  # Guides, architecture and project assets
-├── examples/              # Example applications
-├── tools/                 # Host-side test and validation scripts
-├── Kconfig.projbuild      # ESP32OS feature configuration
-├── partitions.csv         # Flash partition table
-└── sdkconfig.defaults     # ESP-IDF project defaults
-```
-
-## 🤝 Contributing
-
-ESP32OS is built to be explored, improved and extended by embedded developers. Contributions are welcome, including bug fixes, drivers, shell commands, tests, documentation and board validation.
-
-**A good first contribution:**
-
-1. Browse [open issues](https://github.com/faizannazir/Esp32OS/issues).
-2. Look for tasks labelled `good first issue` or propose a focused improvement.
-3. Fork the repository and create a feature branch.
-4. Build and run the relevant tests.
-5. Open a pull request with the problem, solution, test results and any hardware used.
-
-Before contributing, read [CONTRIBUTING.md](docs/CONTRIBUTING.md), [Architecture](docs/ARCHITECTURE.md) and [Testing](docs/TESTING.md).
-
-### Contribution ideas
-
-- Add and validate drivers for sensors and common peripherals.
-- Improve shell usability, command help and diagnostics.
-- Add examples for ESP32, ESP32-S3 and ESP32-C3 boards.
-- Expand automated tests and hardware-in-the-loop coverage.
-- Improve documentation, diagrams and beginner setup instructions.
-- Review security boundaries for optional network services.
-
-If ESP32OS is useful, consider **starring the repository** to help other embedded developers discover it. Share reproducible bugs and tested board configurations so the project can improve.
-
-## 📚 Documentation
-
-| Resource | Description |
+| Start here | Go deeper |
 |---|---|
-| [User Guide](docs/USER_GUIDE.md) | Build, flash and use ESP32OS |
-| [Browser Dashboard](docs/DASHBOARD.md) | Enable and operate the optional on-device control panel |
-| [Architecture](docs/ARCHITECTURE.md) | System layers and design |
-| [Components](docs/COMPONENTS.md) | Component APIs and responsibilities |
-| [Testing](docs/TESTING.md) | Test strategy and validation |
-| [Contributing](docs/CONTRIBUTING.md) | Development and pull-request workflow |
-| [Extending](docs/EXTENDING.md) | Add commands, drivers and services |
-| [License](LICENSE) | MIT license |
-| [Branding Policy](BRANDING_POLICY.md) | Project name and attribution guidance |
+| [User Guide](docs/USER_GUIDE.md) — build, flash and first commands | [Architecture](docs/ARCHITECTURE.md) — runtime design and boundaries |
+| [Browser Dashboard](docs/DASHBOARD.md) — setup, controls and screenshots | [Components](docs/COMPONENTS.md) — APIs and source map |
+| [Testing](docs/TESTING.md) — host and hardware validation | [Extending](docs/EXTENDING.md) — commands, tasks and drivers |
+| [Contributing](docs/CONTRIBUTING.md) — development workflow | [Documentation index](docs/README.md) — all guides |
 
-## 🙏 Built with
+Contributions are welcome: reproducible fixes, board validation, drivers, useful examples and clearer documentation. Read the [contribution guide](docs/CONTRIBUTING.md) and include what you tested.
 
-ESP-IDF · FreeRTOS · LwIP · Python · pySerial
-
-ESP32OS is an independent open-source project and is not officially affiliated with Espressif Systems, FreeRTOS or the maintainers of the upstream projects.
-
----
-
-<div align="center">
-
-**If you build something with ESP32OS, we'd love to see it.**
-
-[⭐ Star the project](https://github.com/faizannazir/Esp32OS/stargazers) · [🐛 Report an issue](https://github.com/faizannazir/Esp32OS/issues) · [💬 Start a discussion](https://github.com/faizannazir/Esp32OS/discussions)
-
-<sub>ESP32OS · MIT License · Built for embedded developers</sub>
-
-</div>
+ESP32OS is released under the [MIT License](LICENSE). See the [Branding Policy](BRANDING_POLICY.md) and [Notice](NOTICE.md) for attribution. This is an independent project, not an official Espressif or FreeRTOS distribution.
