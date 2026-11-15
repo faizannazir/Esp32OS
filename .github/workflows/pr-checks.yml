@@ -113,35 +113,38 @@ jobs:
           if [ -f build/flasher_args.json ]; then cp build/flasher_args.json dist/esp32c3/flasher_args-esp32c3.json; fi
       - name: Write artifact provenance manifest
         shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          # Git commands run inside the ESP-IDF container, whose UID can differ
-          # from the host runner that created the checkout. Trust only this workspace.
+          # The container may run under a different UID from the checkout owner.
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
           SOURCE_COMMIT="$(git rev-parse HEAD)"
           SOURCE_TREE="$(git rev-parse 'HEAD^{tree}')"
-          test -n "$SOURCE_COMMIT"
-          test -n "$SOURCE_TREE"
+          export SOURCE_COMMIT SOURCE_TREE
 
           mkdir -p dist
-          cat > dist/manifest.json <<EOF
-          {
-            "source_commit_sha": "$SOURCE_COMMIT",
-            "source_tree_sha": "$SOURCE_TREE",
-            "pull_request_number": "${{ github.event.pull_request.number }}",
-            "workflow_run_id": "${{ github.run_id }}"
-          }
-          EOF
+          python3 - <<'PYTHON'
+          import json
+          import os
+          import re
+          from pathlib import Path
 
-          # Fail the PR build instead of publishing an artifact that can never
-          # pass the release workflow's provenance verification.
-          jq -e '
-            (.source_commit_sha | type == "string" and length == 40) and
-            (.source_tree_sha | type == "string" and length == 40) and
-            (.pull_request_number | length > 0) and
-            (.workflow_run_id | length > 0)
-          ' dist/manifest.json
+          manifest = {
+              "source_commit_sha": os.environ["SOURCE_COMMIT"],
+              "source_tree_sha": os.environ["SOURCE_TREE"],
+              "pull_request_number": os.environ["PR_NUMBER"],
+              "workflow_run_id": os.environ["WORKFLOW_RUN_ID"],
+          }
+          for key in ("source_commit_sha", "source_tree_sha"):
+              if not re.fullmatch(r"[0-9a-f]{40}", manifest[key]):
+                  raise SystemExit(f"Invalid Git object ID for {key}")
+          for key in ("pull_request_number", "workflow_run_id"):
+              if not re.fullmatch(r"[1-9][0-9]*", manifest[key]):
+                  raise SystemExit(f"Invalid workflow identifier for {key}")
+          Path("dist/manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          PYTHON
       - name: Upload PR Build Artifacts
         uses: actions/upload-artifact@v4
         with:
