@@ -24,4 +24,4 @@ ESP32OS combines an interactive shell and embedded services on top of ESP-IDF an
 
 ## Source of truth
 
-Public headers define the component interfaces. [Startup code](../main/main.c), [command handlers](../components/os_shell/src/shell_commands.c), [Kconfig](../Kconfig.projbuild), [SDK defaults](../sdkconfig.defaults) and the [partition table](../partitions.csv) define shipped behavior. The guides describe this checkout; they do not certify every board or peripheral.
+Public headers define the component interfaces. [Startup code](../main/main.c), [command handlers](../components/os_shell/src/shell_commands.c), [Kconfig](../main/Kconfig.projbuild), [SDK defaults](../sdkconfig.defaults) and the [partition table](../partitions.csv) define shipped behavior. The guides describe this checkout; they do not certify every board or peripheral.

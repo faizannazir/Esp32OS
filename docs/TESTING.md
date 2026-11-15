@@ -45,7 +45,7 @@ The [health checker](../tools/test_build_health.py) verifies application, ELF, m
 
 ## UART integration
 
-Use a development board with suitable wiring. The [serial runner](../tools/test_integration.py) writes/removes files, changes logging, touches NVS keys and drives GPIO2 and GPIO4. Review those operations for your board before running it. Some directory expectations may fail with the current SPIFFS wrapper; report those failures rather than treating directory support as verified.
+Use a development board with suitable wiring. The [serial runner](../tools/test_integration.py) writes/removes files, changes logging, touches NVS keys and drives GPIO2 and GPIO4. Review those operations for your board before running it. Use `--skip-peripherals` to omit GPIO and ADC checks when the wiring is unknown. Some directory expectations may fail with the current SPIFFS wrapper; report those failures rather than treating directory support as verified.
 
 Close the serial monitor so the runner can open the port:
 
@@ -55,6 +55,19 @@ python3 tools/test_integration.py --port /dev/ttyUSB0 --baud 115200
 ```
 
 Record the exact board, chip target, commit, ESP-IDF version, wiring and script output. A substring match confirms the response checked by that test; it does not prove voltage accuracy or external circuit behavior.
+
+## ESP32 bench results
+
+On November 15, 2026, an ESP32-D0WD-V3 revision 3.1 with 4 MB flash built and booted with ESP-IDF 6.0 over UART at 115200 baud. The default firmware passed 14 build health checks. The portal-enabled build passed all 29 UART smoke checks with `--skip-peripherals`, covering shell commands, managed task listing, SPIFFS file operations, logging and NVS.
+
+```text
+esp32os> uname -a
+esp32os ESP32  WiFi  IDF-v6.0  2 core(s)  Flash:4MB
+```
+
+These results apply to the tested board and wiring. GPIO, ADC and PWM checks were skipped because LCD wiring was unknown.
+
+The sidebar, overview editor and Wi-Fi screens were exercised locally with example API responses. Browser checks covered terminal output, nearby network selection, secured and open join requests, saved widget order and a 390 px viewport. The portal-enabled ESP32 build passed all 14 build health checks with about 867 KiB free in the 2 MiB factory application partition. The final build was flashed to the bench ESP32. The board joined the shared Wi-Fi, returned nearby scan results and reported the associated SSID in both its UART shell and its status API. Safari opened the live portal and returned the board’s response to `uname -a`. The [dashboard screenshots](DASHBOARD.md#live-screenshots) came from that session.
 
 ## Built-in feature suites
 

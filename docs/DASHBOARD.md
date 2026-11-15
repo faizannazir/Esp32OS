@@ -28,35 +28,38 @@ wifi status
 
 The web portal and Telnet are separate options; you do not need to enable Telnet or the open AP to use the dashboard.
 
-## Screenshots
+## Device apps
 
-These are browser captures of the actual [bundled dashboard](../components/webportal/dashboard/index.html), populated with **sample API responses**. They are not captures from a physical ESP32. Values, task rows and addresses illustrate the interface, not measured performance. See [asset provenance](assets/README.md).
-
-### Desktop
-
-![ESP32OS dashboard at desktop width with sample status, heap history and managed processes](assets/dashboard-desktop.png)
-
-### Mobile
-
-<p align="center"><img src="assets/dashboard-mobile.png" width="390" alt="Actual ESP32OS dashboard mobile overview with sample metrics and telemetry"></p>
-
-### Preferences
-
-![Actual ESP32OS dashboard settings dialog](assets/dashboard-settings.png)
-
-## Use the panels
-
-| Panel | Behavior |
+| Screen | What you can do |
 |---|---|
-| Metrics | Free heap, approximate CPU load, uptime, managed process count and network status |
-| Telemetry | A rolling chart of free heap from the device's recent samples |
-| Processes | Managed task snapshots with Pause, Resume and Stop actions |
-| Command terminal | Submits a command string and displays its captured response |
-| Device controls | Read-only Wi-Fi status, memory details, OTA state and reboot/OTA actions |
+| Overview | Check heap, approximate CPU load, uptime, task count and Wi-Fi station state |
+| Terminal | Send shell commands and view their captured output |
+| Processes | Inspect, pause, resume or stop managed FreeRTOS tasks |
+| Wi-Fi | Scan nearby networks, choose one and connect the station |
+| System | Check memory and uptime, inspect OTA state or reboot the device |
 
-Process controls affect real device tasks. The process table does not represent every ESP-IDF internal task. Use UART as a recovery interface when experimenting with task control.
+Process controls affect real tasks. Use UART as a recovery interface when experimenting. OTA confirmation and rollback depend on the board's current firmware state and partition layout. See [OTA prerequisites](USER_GUIDE.md#ota-prerequisites).
 
-OTA buttons reflect reported state. The default partition table contains no OTA slots; see [OTA prerequisites](USER_GUIDE.md#ota-prerequisites) before expecting update confirmation or rollback to be available.
+## Join a Wi-Fi network from the console
+
+1. Open **Wi-Fi** from the sidebar and select **Scan**.
+2. Choose a named network. The list shows signal strength and whether it requires a password.
+3. For a secured network, enter its password. Select **Connect**.
+4. Check the **Network** name and station IP shown after connection. If changing networks disconnects the browser, run `wifi status` over UART and reopen the console at the new IP.
+
+This joins open or compatible WPA personal networks in range of your board. The browser does not save the password in its preferences. The unauthenticated portal sends credentials over HTTP. Use an isolated setup network or use UART if you need to avoid sending credentials over HTTP.
+
+## Live screenshots
+
+The console below was served by a physical ESP32-D0WD-V3 with 4 MB flash and opened in Safari over shared Wi-Fi.
+
+| Overview | Browser terminal | Widget settings |
+|---|---|---|
+| [Live metrics and heap history](assets/dashboard-live-desktop.jpg) | [Real response to `uname -a`](assets/dashboard-live-terminal.jpg) | [Widget controls](assets/dashboard-live-settings.jpg) |
+
+![Browser terminal displaying uname output from the physical ESP32](assets/dashboard-live-terminal.jpg)
+
+Use the [USB terminal instructions](USER_GUIDE.md#connect-over-usb-and-open-the-terminal) for direct serial access.
 
 ## Command capture limits
 
@@ -66,7 +69,7 @@ Use a simple command such as `echo hello` to check the round trip. If a command 
 
 ## Personalize the view
 
-Select **Settings** to change the dashboard title, dark/light/system appearance, mint/blue/violet/amber accent, comfortable/compact spacing, automatic refresh (3, 5, 10 or 30 seconds, or manual), and visible panels.
+Select **Settings** to change the dashboard title, dark/light/system appearance, mint/blue/violet/amber accent, comfortable/compact spacing, automatic refresh (3, 5, 10 or 30 seconds, or manual), and overview widgets. Tick **Device metrics**, **Free heap history**, or **App shortcuts** to show them. Use **Up** and **Down** to reorder them.
 
 **Save preferences** stores choices in this browser's local storage. **Reset defaults** fills the default choices; save to persist them. Preferences do not change firmware, Wi-Fi configuration or another browser's view. Clearing site data resets saved preferences.
 
@@ -79,18 +82,20 @@ The implementation lives in [`webportal.c`](../components/webportal/src/webporta
 | Method | Endpoint | Purpose / request body |
 |---|---|---|
 | GET | `/` | Embedded HTML dashboard |
-| GET | `/api/status` | Heap, approximate CPU, uptime and network status |
+| GET | `/api/status` | Heap, approximate CPU, uptime and station status including the associated SSID as `ssid_hex` |
 | GET | `/api/processes` | Managed process list |
 | GET | `/api/telemetry/history` | Recent system samples |
 | GET | `/api/process/history?pid=...` | Recent samples for a managed process |
 | GET | `/api/ota` | Confirmation and rollback availability |
+| GET | `/api/wifi/scan` | Nearby named networks with hex-encoded SSIDs, RSSI and open status |
+| POST | `/api/wifi/connect` | Binary body containing one SSID-length byte, the SSID bytes and the password bytes |
 | POST | `/api/process/action` | Body `pid=<id>&action=<suspend\|resume\|kill>` |
 | POST | `/api/command` | Plain-text shell command |
 | POST | `/api/ota/confirm` | Confirm the running image when supported |
 | POST | `/api/ota/rollback` | Request rollback when supported |
 | POST | `/api/system/reboot` | Restart the device |
 
-The dashboard sends POST bodies with `Content-Type: text/plain`, including the form-like process-action body. Status/history endpoints return JSON; command and action endpoints return text. The process-history API exists even though the current page charts system free heap only. There is no Wi-Fi configuration form; use UART commands.
+The Wi-Fi join request uses `application/octet-stream`. Shell commands and device actions use `text/plain`, including the process-action body. Status/history endpoints return JSON; command and action endpoints return text. The process-history API exists even though the current page charts system free heap only.
 
 ## Security boundary
 

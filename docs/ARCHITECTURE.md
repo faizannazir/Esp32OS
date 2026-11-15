@@ -81,4 +81,4 @@ The partition table is configured at `0x8000`. Bootloader placement is target-sp
 
 ## Access defaults
 
-[`Kconfig.projbuild`](../Kconfig.projbuild) disables the web portal, Telnet and AP fallback by default. If enabled, the AP is open, Telnet is plaintext with locally configured credentials, and the HTTP portal has no authentication. These are development interfaces, not security boundaries for untrusted clients.
+[`main/Kconfig.projbuild`](../main/Kconfig.projbuild) disables the web portal, Telnet and AP fallback by default. If enabled, the AP is open, Telnet is plaintext with locally configured credentials, and the HTTP portal has no authentication. These are development interfaces, not security boundaries for untrusted clients.

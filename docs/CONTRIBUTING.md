@@ -52,7 +52,7 @@ Use [Testing](TESTING.md) for exact commands and current limits. If hardware or 
 
 When changing behavior, update the matching guide and help text in the same PR. During this documentation refresh, several claims had drifted from the implementation; use these checks to prevent recurrence:
 
-- Verify default behavior against `main/main.c`, `Kconfig.projbuild`, `sdkconfig.defaults` and `partitions.csv`.
+- Verify default behavior against `main/main.c`, `main/Kconfig.projbuild`, `sdkconfig.defaults` and `partitions.csv`.
 - Link public headers instead of copying large declarations that can go stale.
 - Distinguish implemented code, build coverage and measured hardware behavior.
 - Label screenshots made with sample data; keep the real dashboard HTML as their visual source.

@@ -11,6 +11,42 @@ Build and flash the firmware, start with the UART console, then enable the servi
 - Connect a USB data cable and identify the board's serial port. The firmware shell reads **UART0 at 115200 baud**. Native USB and a USB-to-UART bridge are not interchangeable on every board.
 - Check your board's schematic before connecting peripherals. Chip family support does not establish safe pin assignments for every board.
 
+## Connect over USB and open the terminal
+
+![USB data cable from a computer to the ESP32 board’s USB-to-UART bridge](assets/usb-uart-connection.svg)
+
+1. Connect the board to your computer with a **USB data cable**. Use the board's USB-to-UART connector if it has separate native USB and UART ports.
+2. Find the serial port. Compare the port list before and after plugging in the board.
+
+   | System | How to find the port |
+   |---|---|
+   | macOS | Run `ls /dev/cu.*`. The test board appeared as `/dev/cu.usbserial-0001`. |
+   | Linux | Run `ls /dev/ttyUSB* /dev/ttyACM*` and identify the new port. |
+   | Windows | Open **Device Manager → Ports (COM & LPT)** and note the new COM port. |
+
+3. For a board that already has ESP32OS installed, open the monitor from the project directory in an ESP-IDF terminal. Substitute your own port.
+
+   ```bash
+   idf.py -p /dev/cu.usbserial-0001 monitor
+   ```
+
+   On macOS you can also open the shell without the ESP-IDF monitor:
+
+   ```bash
+   screen /dev/cu.usbserial-0001 115200
+   ```
+
+4. Press **Enter** and look for `esp32os>`. Type `help` or `uname -a`. The test board returned this over UART:
+
+   ```text
+   esp32os> uname -a
+   esp32os ESP32  WiFi  IDF-v6.0  2 core(s)  Flash:4MB
+   ```
+
+5. Exit the ESP-IDF monitor with **Ctrl+]**. In `screen`, press **Ctrl+A**, then **K**, and confirm. Close the serial session before flashing or running the integration script.
+
+If you only see an LED and no serial port, try a known data cable and the UART connector. If the port opens but the prompt is missing, check 115200 baud, press **Enter**, and reset the board if needed.
+
 ## Build and flash
 
 Run from the repository root in an ESP-IDF terminal. On Linux/macOS, activate an existing installation if needed:

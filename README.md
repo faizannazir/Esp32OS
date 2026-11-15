@@ -37,17 +37,20 @@ The default firmware starts with local UART access. The web portal, Telnet and o
 
 ## The device in your browser
 
-The dashboard is a standalone HTML page embedded in the firmware and served by the board. It includes a free-heap chart, process controls, a command form, Wi-Fi status and appearance settings. No cloud account or frontend build step is required.
+The ESP32 serves the device console directly. Use the sidebar to switch between the overview, terminal, managed processes, Wi-Fi, and system controls. The Wi-Fi screen lists nearby networks and lets you join one. In Settings, choose which overview widgets appear and reorder them. No cloud account or frontend build step is required.
 
-![Actual ESP32OS dashboard rendered locally with sample API responses](docs/assets/dashboard-desktop.png)
+![Live ESP32OS dashboard in Safari with readings from the physical ESP32](docs/assets/dashboard-live-desktop.jpg)
 
-*Actual bundled dashboard rendered in a browser with sample API responses; not a live hardware capture or performance measurement. [Screenshot provenance](docs/assets/README.md).*
-
-The page adapts to narrow screens and supports dark/light appearance, accent colors, panel visibility and refresh preferences. [View the mobile and settings captures →](docs/DASHBOARD.md#screenshots)
+*Captured from an ESP32-D0WD-V3 with 4 MB flash connected to Wi-Fi. See the [browser terminal and settings captures](docs/DASHBOARD.md#live-screenshots).*
 
 > The portal is disabled by default and has no authentication. Enable it only on an isolated development network. Its command form is request/response based; output capture is limited to handlers that use the shell output helpers. [Setup and limitations →](docs/DASHBOARD.md)
 
 ## Get started
+
+![Computer connected to ESP32 UART0 through a USB data cable](docs/assets/usb-uart-connection.svg)
+
+Connect the board over USB and find its serial port. For an already flashed board, open the console at **115200 baud**. See [USB and terminal setup](docs/USER_GUIDE.md#connect-over-usb-and-open-the-terminal) for macOS, Linux and Windows.
+
 
 You need a supported development board with **at least 4 MB flash**, a USB data cable, access to **UART0**, and the **ESP-IDF 6.0** toolchain. Use the Python environment supplied by ESP-IDF. Follow the [official installation guide](https://docs.espressif.com/projects/esp-idf/en/v6.0/esp32/get-started/) if the toolchain is not installed.
 
@@ -83,7 +86,14 @@ export DEVICE_NAME=bench
 printenv DEVICE_NAME
 ```
 
-These are commands to run, not fabricated device output. Results vary with your board and firmware configuration. Continue with the [User Guide](docs/USER_GUIDE.md) for networking, scheduling and troubleshooting.
+On the tested ESP32-D0WD-V3 board, the UART console reported:
+
+```text
+esp32os> uname -a
+esp32os ESP32  WiFi  IDF-v6.0  2 core(s)  Flash:4MB
+```
+
+Results vary by board and firmware configuration. Continue with the [User Guide](docs/USER_GUIDE.md) for networking, scheduling and troubleshooting.
 
 ## Hardware and build support
 
