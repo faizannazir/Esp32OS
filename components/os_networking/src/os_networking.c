@@ -143,9 +143,9 @@ esp_err_t os_net_init(void)
 #else
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 #endif
-    ESP_ERROR_CHECK(esp_wifi_start());
-
     s_net.events = xEventGroupCreate();
+    if (!s_net.events) return ESP_ERR_NO_MEM;
+    ESP_ERROR_CHECK(esp_wifi_start());
     s_net.initialised = true;
 
 #if defined(CONFIG_ESP32OS_ENABLE_AP_FALLBACK) && CONFIG_ESP32OS_ENABLE_AP_FALLBACK
@@ -176,7 +176,7 @@ esp_err_t os_net_init(void)
    ──────────────────────────────────────────────── */
 int os_wifi_scan(os_wifi_scan_result_t *results, int max_results)
 {
-    if (!s_net.initialised || !results) return -1;
+    if (!s_net.initialised || !results || max_results <= 0) return -1;
 
     wifi_scan_config_t scan_cfg = {
         .ssid       = NULL,
@@ -192,20 +192,31 @@ int os_wifi_scan(os_wifi_scan_result_t *results, int max_results)
     /* Wait up to 5s for scan done */
     EventBits_t bits = xEventGroupWaitBits(s_net.events, BIT2, pdTRUE,
                                             pdFALSE, pdMS_TO_TICKS(5000));
-    if (!(bits & BIT2)) return 0;
+    if (!(bits & BIT2)) {
+        esp_wifi_scan_stop();
+        return -1;
+    }
 
     uint16_t ap_count = 0;
-    esp_wifi_scan_get_ap_num(&ap_count);
+    if (esp_wifi_scan_get_ap_num(&ap_count) != ESP_OK) return -1;
     if (ap_count == 0) return 0;
 
     uint16_t fetch = (ap_count < (uint16_t)max_results) ? ap_count : (uint16_t)max_results;
     wifi_ap_record_t *ap_list = calloc(fetch, sizeof(wifi_ap_record_t));
-    if (!ap_list) return 0;
+    if (!ap_list) {
+        esp_wifi_clear_ap_list();
+        return -1;
+    }
 
-    esp_wifi_scan_get_ap_records(&fetch, ap_list);
+    if (esp_wifi_scan_get_ap_records(&fetch, ap_list) != ESP_OK) {
+        free(ap_list);
+        esp_wifi_clear_ap_list();
+        return -1;
+    }
 
     for (int i = 0; i < fetch; i++) {
-        strncpy(results[i].ssid, (char *)ap_list[i].ssid, 32);
+        memcpy(results[i].ssid, ap_list[i].ssid, 32);
+        results[i].ssid[32] = '\0';
         memcpy(results[i].bssid, ap_list[i].bssid, 6);
         results[i].rssi    = ap_list[i].rssi;
         results[i].channel = ap_list[i].primary;
@@ -221,35 +232,35 @@ int os_wifi_scan(os_wifi_scan_result_t *results, int max_results)
 esp_err_t os_wifi_connect(const char *ssid, const char *password)
 {
     if (!s_net.initialised) return ESP_ERR_INVALID_STATE;
-    if (!ssid) return ESP_ERR_INVALID_ARG;
+    size_t ssid_len = ssid ? strlen(ssid) : 0;
+    size_t password_len = password ? strlen(password) : 0;
+    wifi_config_t wifi_cfg = {0};
+    if (!ssid_len || ssid_len > sizeof(wifi_cfg.sta.ssid) ||
+        password_len > sizeof(wifi_cfg.sta.password)) {
+        return ESP_ERR_INVALID_ARG;
+    }
 
     s_net.retry_count = 0;
     xEventGroupClearBits(s_net.events, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
-
-    wifi_config_t wifi_cfg = {0};
-    strncpy((char *)wifi_cfg.sta.ssid, ssid, sizeof(wifi_cfg.sta.ssid) - 1);
-    if (password && strlen(password) > 0) {
-        strncpy((char *)wifi_cfg.sta.password, password,
-                sizeof(wifi_cfg.sta.password) - 1);
-    }
-    wifi_cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-    if (!password || strlen(password) == 0) {
-        wifi_cfg.sta.threshold.authmode = WIFI_AUTH_OPEN;
-    }
-
-    /* Store SSID for status reporting */
-    strncpy(s_net.status.ssid, ssid, sizeof(s_net.status.ssid) - 1);
+    memcpy(wifi_cfg.sta.ssid, ssid, ssid_len);
+    if (password_len) memcpy(wifi_cfg.sta.password, password, password_len);
+    wifi_cfg.sta.threshold.authmode = password_len ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
 
     esp_wifi_disconnect();
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg));
-    esp_wifi_connect();
+    esp_err_t ret = esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg);
+    if (ret != ESP_OK) return ret;
+    ret = esp_wifi_connect();
+    if (ret != ESP_OK) return ret;
 
     EventBits_t bits = xEventGroupWaitBits(s_net.events,
                                             WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
                                             pdTRUE, pdFALSE,
                                             pdMS_TO_TICKS(WIFI_CONNECT_TIMEOUT_MS));
 
-    if (bits & WIFI_CONNECTED_BIT) return ESP_OK;
+    if (bits & WIFI_CONNECTED_BIT) {
+        memcpy(s_net.status.ssid, ssid, ssid_len + 1);
+        return ESP_OK;
+    }
     OS_LOGW(TAG, "Failed to connect to '%s'", ssid);
     return ESP_FAIL;
 }
@@ -267,6 +278,8 @@ void os_wifi_get_status(os_net_status_t *st)
     if (st->connected) {
         wifi_ap_record_t ap;
         if (esp_wifi_sta_get_ap_info(&ap) == ESP_OK) {
+            memcpy(st->ssid, ap.ssid, sizeof(st->ssid) - 1);
+            st->ssid[sizeof(st->ssid) - 1] = '\0';
             st->rssi = ap.rssi;
         }
     } else if (s_net.netif_ap) {

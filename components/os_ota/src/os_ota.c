@@ -451,19 +451,8 @@ void os_ota_get_info(os_ota_info_t *info)
     strncpy(info->error_message, s_error_message, sizeof(info->error_message) - 1);
     info->error_message[sizeof(info->error_message) - 1] = '\0';
 
-    /* Check rollback capability */
-    const esp_partition_t *boot_partition = esp_ota_get_boot_partition();
-    const esp_partition_t *running_partition = esp_ota_get_running_partition();
-    info->can_rollback = (boot_partition != NULL && running_partition != NULL &&
-                          boot_partition != running_partition);
-
-    /* Check if needs confirmation */
-    esp_ota_img_states_t ota_state;
-    if (esp_ota_get_state_partition(running_partition, &ota_state) == ESP_OK) {
-        info->rollback_confirmed = (ota_state != ESP_OTA_IMG_PENDING_VERIFY);
-    } else {
-        info->rollback_confirmed = true;
-    }
+    info->can_rollback = os_ota_can_rollback();
+    info->rollback_confirmed = !os_ota_needs_confirmation();
 
     xSemaphoreGive(s_mutex);
 }
@@ -534,9 +523,15 @@ esp_err_t os_ota_rollback(void)
     return ret;
 }
 
+static bool has_ota_metadata(void)
+{
+    return esp_partition_find_first(ESP_PARTITION_TYPE_DATA,
+                                    ESP_PARTITION_SUBTYPE_DATA_OTA, NULL) != NULL;
+}
+
 bool os_ota_can_rollback(void)
 {
-    if (!s_initialized) {
+    if (!s_initialized || !has_ota_metadata()) {
         return false;
     }
 
@@ -552,7 +547,7 @@ bool os_ota_can_rollback(void)
 
 bool os_ota_needs_confirmation(void)
 {
-    if (!s_initialized) {
+    if (!s_initialized || !has_ota_metadata()) {
         return false;
     }
 
