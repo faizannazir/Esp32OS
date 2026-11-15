@@ -1,0 +1,179 @@
+{
+  "/api/status": {
+    "free_heap": 218112,
+    "total_heap": 334684,
+    "min_free_heap": 206848,
+    "largest_free_block": 163840,
+    "cpu_load_pct": 7,
+    "procs": 1,
+    "uptime_s": 7325,
+    "net": {
+      "connected": true,
+      "ip": "192.0.2.32",
+      "gw": "192.0.2.1"
+    }
+  },
+  "/api/processes": [
+    {
+      "pid": 1,
+      "name": "sys_monitor",
+      "state": "BLK",
+      "priority": 3,
+      "stack_high_water": 2048,
+      "runtime_ticks": 0,
+      "is_system": true
+    }
+  ],
+  "/api/ota": {
+    "can_rollback": false,
+    "needs_confirmation": false
+  },
+  "/api/telemetry/history": {
+    "samples": [
+      {
+        "ts_s": 7210,
+        "free_heap": 218112,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7215,
+        "free_heap": 218368,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7220,
+        "free_heap": 218624,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7225,
+        "free_heap": 218368,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7230,
+        "free_heap": 217600,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7235,
+        "free_heap": 217856,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7240,
+        "free_heap": 218112,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7245,
+        "free_heap": 218880,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7250,
+        "free_heap": 218624,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7255,
+        "free_heap": 218368,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7260,
+        "free_heap": 217856,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7265,
+        "free_heap": 218112,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7270,
+        "free_heap": 218368,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7275,
+        "free_heap": 218624,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7280,
+        "free_heap": 218112,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7285,
+        "free_heap": 217344,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7290,
+        "free_heap": 217600,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7295,
+        "free_heap": 217856,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7300,
+        "free_heap": 218112,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7305,
+        "free_heap": 218368,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7310,
+        "free_heap": 218624,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7315,
+        "free_heap": 218368,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7320,
+        "free_heap": 218112,
+        "cpu_load_pct": 7,
+        "procs": 1
+      },
+      {
+        "ts_s": 7325,
+        "free_heap": 218112,
+        "cpu_load_pct": 7,
+        "procs": 1
+      }
+    ]
+  }
+}

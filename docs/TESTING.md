@@ -1,307 +1,115 @@
-# ESP32OS Testing Guide
+# Testing ESP32OS
 
-This guide is optimized for contributors who want a quick, repeatable way to validate changes.
+[Documentation](README.md) · [Contributing](CONTRIBUTING.md) · [User Guide](USER_GUIDE.md)
 
-## Quick Local Test Flow
+Separate host checks, firmware builds and device validation when reporting results. A successful Python run or CI build does not establish that peripherals work on a physical board.
+
+## What runs today
+
+| Check | Entry point | What it establishes |
+|---|---|---|
+| Python syntax | `python3 -m py_compile tools/test_*.py` | Test tools parse successfully |
+| Host command model | `tools/test_shell_host_integration.py` | Environment and scheduler scenarios pass in a Python model |
+| Firmware build | `idf.py build` | C components compile and link for the selected target |
+| Build health | `tools/test_build_health.py --target <target>` | Required artifacts, partition headroom and memory budgets pass |
+| UART integration | `tools/test_integration.py --port <port>` | Scripted commands return expected text on a connected board |
+| Feature suites | `test <suite>` at the device prompt | The selected built-in C suite executes on the board |
+| Manual system checks | Board-specific procedure | Actual wiring, networking, persistence and sustained operation |
+
+The host runner implements its own `HostShell` in Python. It does **not** compile or execute `os_shell.c`, emulate an ESP32, or test FreeRTOS timing. No automated nightly hardware soak test is configured in the repository workflows.
+
+## Without a board
 
 From the repository root:
 
 ```bash
-. $IDF_PATH/export.sh
-idf.py set-target esp32s3
-idf.py build
-idf.py -p /dev/ttyUSB0 flash
-python3 -m pip install pyserial
-python3 tools/test_integration.py --port /dev/ttyUSB0 --baud 115200
-```
-
-Pass criteria:
-
-- Build completes without errors
-- Integration script reports all checks as passed
-
-If you are using a different board, change target and serial port accordingly.
-
----
-
-## Testing Strategy
-
-ESP32OS uses a three-tier test approach:
-
-| Tier | Method | When |
-|------|--------|------|
-| **Unit** | Host-side mocks + Unity framework | During development |
-| **Integration** | Hardware-in-the-loop via UART shell | Before every release |
-| **System** | Full soak test on real hardware | Nightly / pre-release |
-
----
-
-## Tier 1 — Unit Tests (Host Simulation)
-
-ESP-IDF includes the `unity` test framework. This repository does not currently ship host-side unit tests, so the primary automated check is the integration script in `tools/`.
-
-CI sanity checks validate the test harness itself with:
-
-- `python -m py_compile tools/test_integration.py`
-- `python -m py_compile tools/test_shell_host_integration.py`
-- `python -m py_compile tools/test_build_health.py`
-- `python tools/test_shell_host_integration.py`
-- `python tools/test_integration.py --help`
-
-### Build size and memory budget checks
-
-This repository includes `tools/test_build_health.py` to validate build artifacts and enforce size budgets without hardware.
-
-From the project root after `idf.py build`:
-
-```bash
-python3 tools/test_build_health.py --target esp32
-```
-
-The script verifies:
-
-- required artifacts exist (`.bin`, `.elf`, `.map`, bootloader, partition table)
-- app binary fits in the factory partition with minimum free headroom
-- IRAM and DRAM usage percentages from `idf_size.py` stay under budget
-- expected core component libraries are present in the linker map
-
-### Host shell integration tests
-
-This repository includes an offline host-side integration runner for shell command workflows that do not require hardware access.
-
-From the project root:
-
-```bash
+python3 -m py_compile tools/test_integration.py tools/test_shell_host_integration.py tools/test_build_health.py
 python3 tools/test_shell_host_integration.py
 ```
 
-Covered command workflows:
+The model covers `env`, `export`, `unset`, `printenv`, `run`, `at`, `every`, `jobs` and `killjob`. Run it after changing the documented command contract, but also validate C changes on the actual firmware.
 
-- `env`
-- `export`
-- `unset`
-- `printenv`
-- `run`
-- `at`
-- `every`
-- `jobs`
-- `killjob`
+## Firmware builds and budgets
 
-### Integration script
+In an ESP-IDF 6.0 terminal:
 
-From the project root:
+```bash
+idf.py set-target esp32
+idf.py build
+python3 tools/test_build_health.py --target esp32
+```
+
+Repeat for `esp32s3` and `esp32c3` when changing shared firmware. Run the health check immediately after each corresponding build. Target switching regenerates configuration; preserve any required local settings separately.
+
+The [health checker](../tools/test_build_health.py) verifies application, ELF, map, bootloader and partition artifacts, application headroom, IRAM/DRAM budgets and expected component libraries. Its source defines the thresholds; these are build checks rather than measured runtime performance.
+
+## UART integration
+
+Use a development board with suitable wiring. The [serial runner](../tools/test_integration.py) writes/removes files, changes logging, touches NVS keys and drives GPIO2 and GPIO4. Review those operations for your board before running it. Use `--skip-peripherals` to omit GPIO and ADC checks when the wiring is unknown. Some directory expectations may fail with the current SPIFFS wrapper; report those failures rather than treating directory support as verified.
+
+Close the serial monitor so the runner can open the port:
 
 ```bash
 python3 -m pip install pyserial
 python3 tools/test_integration.py --port /dev/ttyUSB0 --baud 115200
 ```
 
-The script exercises shell, filesystem, logging, GPIO, ADC, and NVS commands over the serial console.
+Record the exact board, chip target, commit, ESP-IDF version, wiring and script output. A substring match confirms the response checked by that test; it does not prove voltage accuracy or external circuit behavior.
 
----
+## ESP32 bench results
 
-## Tier 2 — Hardware Integration Tests (Shell-based)
-
-Connect to the device via UART or Telnet and run each test sequence manually or via a script.
-
-Run:
-```bash
-python3 -m pip install pyserial
-python3 tools/test_integration.py --port /dev/ttyUSB0
-```
-
-For manual validation, the shell prompt should accept `help`, `ps`, `free`, `ls`, `wifi status`, and `dmesg` after boot.
-
-### Feature Suite Commands
-
-The shell exposes built-in component test runners:
+On November 15, 2026, an ESP32-D0WD-V3 revision 3.1 with 4 MB flash built and booted with ESP-IDF 6.0 over UART at 115200 baud. The default firmware passed 14 build health checks. The portal-enabled build passed all 29 UART smoke checks with `--skip-peripherals`, covering shell commands, managed task listing, SPIFFS file operations, logging and NVS.
 
 ```text
-esp32os> test mqtt
-esp32os> test ipc
-esp32os> test ota
-esp32os> test pwm
-esp32os> test timer
-esp32os> test env
-esp32os> test sched
-esp32os> test all
+esp32os> uname -a
+esp32os ESP32  WiFi  IDF-v6.0  2 core(s)  Flash:4MB
 ```
 
-Use `test all` as a quick regression pass after changes in `os_mqtt`, `os_ipc`, `os_ota`, `os_pwm`, `os_timer`, `os_env`, or `os_scheduler`.
+These results apply to the tested board and wiring. GPIO, ADC and PWM checks were skipped because LCD wiring was unknown.
 
-### MQTT Payload Validation
+The sidebar, overview editor and Wi-Fi screens were exercised locally with example API responses. Browser checks covered terminal output, nearby network selection, secured and open join requests, saved widget order and a 390 px viewport. The portal-enabled ESP32 build passed all 14 build health checks with about 867 KiB free in the 2 MiB factory application partition. The final build was flashed to the bench ESP32. The board joined the shared Wi-Fi, returned nearby scan results and reported the associated SSID in both its UART shell and its status API. Safari opened the live portal and returned the board’s response to `uname -a`. The [dashboard screenshots](DASHBOARD.md#live-screenshots) came from that session.
 
-Validate both text and binary publish paths:
+## Built-in feature suites
+
+From the device shell:
 
 ```text
-esp32os> mqtt config mqtt://broker.hivemq.com
-esp32os> mqtt connect
-esp32os> mqtt pub dev/status online -q 1
-esp32os> mqtt pubhex dev/raw DEADBEEF -q 0
+test mqtt
+test ipc
+test ota
+test pwm
+test timer
+test env
+test sched
+test all
 ```
 
-`mqtt pub` is text-oriented; `mqtt pubhex` is the binary-safe path for payloads with embedded null bytes.
+These are the suites dispatched by [`cmd_test()`](../components/os_shell/src/shell_commands.c). Test files also exist in other component directories; their presence does not mean `test all` invokes them. Review suite code before running: suites can allocate resources, change configuration and manipulate peripherals. An OTA suite passing does not add OTA slots to the default partition table.
 
-### Pre-PR Minimum Checklist
+## Manual validation
 
-Before opening a pull request, run and verify:
+Choose checks relevant to the change and state what actually happened:
 
-1. `idf.py set-target esp32 && idf.py build`
-2. `idf.py set-target esp32s3 && idf.py build`
-3. `python3 tools/test_integration.py --port <your-port>` on at least one real board
+| Area | Procedure and evidence |
+|---|---|
+| Boot and shell | Cold boot, capture initialization logs, run `help`, `free`, `ps` and `dmesg` |
+| File persistence | Write `/persistence.txt`, read it, reboot, read it again; record any mount/format messages |
+| Wi-Fi | Connect to your network, interrupt connectivity, observe reconnect attempts and final `wifi status` |
+| GPIO/PWM/I²C/ADC | Record selected pins, wiring, instrument/sensor and measured results |
+| Sustained operation | Repeat representative workloads; record heap trend, duration, resets and error logs |
+| Dashboard | Enable on an isolated network; test status, browser settings, relevant controls and UART fallback |
+| OTA | Use an OTA-capable layout and test update, confirmation and rollback with explicit recovery steps |
 
-This matches what CI validates on PRs and what release automation validates on `master`.
+Do not use `suspend sys_monitor` as a watchdog test: the main loop feeds the configured watchdog, and `sys_monitor` is a separate diagnostics task. Watchdog validation needs a controlled test that actually stops a subscribed task from feeding it, plus a way to recover the board.
 
----
+## CI and release artifacts
 
-## Tier 3 — System / Soak Tests
+- [PR checks](../.github/workflows/pr-checks.yml) run Python harness checks, build all three targets in `espressif/idf:v6.0`, validate build health and upload artifacts with source provenance.
+- [Master releases](../.github/workflows/master-release.yml) can reuse successful PR artifacts only after checking their source tree and required files. Otherwise, they build from source. The workflow then packages firmware and creates a release.
+- Neither workflow runs attached-board integration or peripheral tests.
 
-### 3.1 Memory Leak Test
+For documentation-only changes, verify links, examples and rendered images; a new firmware build is unnecessary unless a code/configuration change also needs validation.
 
-```bash
-# Watch free heap over 1 hour of command cycling
-esp32os> free
-esp32os> ps
-esp32os> top
-# ... repeat in a loop via test script
-# Heap should remain stable (±2 KB acceptable)
-```
+## Reporting a failure
 
-Expected: No monotonic decrease in `free` output.
-
-### 3.2 Telnet Concurrent Sessions Test
-
-```bash
-# Terminal 1:
-telnet <esp32-ip> 2222
-
-# Terminal 2 (simultaneously):
-telnet <esp32-ip> 2222
-
-# Both sessions should work independently
-# Run `ps` in each — output should show both telnet tasks
-```
-
-### 3.3 WiFi Reconnect Test
-
-```bash
-esp32os> wifi connect MySSID MyPass
-esp32os> wifi status                    # confirm connected
-# Power-cycle the router or disable/enable WiFi
-# Observe: system should auto-reconnect within 30s
-esp32os> wifi status                    # should show Connected again
-```
-
-### 3.4 Watchdog Test
-
-```bash
-# Simulate watchdog timeout by suspending sys_monitor:
-esp32os> ps
-esp32os> suspend <pid-of-sys_monitor>
-# Wait 30 seconds
-# Expected: system reboot with "task watchdog" reset reason
-# After reboot:
-esp32os> uname -a                       # should print normally
-```
-
-### 3.5 Filesystem Persistence Test
-
-```bash
-# Write files
-esp32os> write /etc/hostname myesp32
-esp32os> write /etc/notes.txt "persistent data"
-
-# Reboot
-esp32os> reboot
-
-# After reboot, verify files persist
-esp32os> cat /etc/hostname              # should print: myesp32
-esp32os> cat /etc/notes.txt             # should print: persistent data
-```
-
-### 3.6 I2C Scan Test
-
-Connect any I2C device (e.g., SSD1306 OLED at 0x3C):
-```bash
-esp32os> i2c scan 21 22
-# Expected output includes: 3c
-```
-
-### 3.7 ADC Calibration Test
-
-```bash
-# With 1.65V reference on ADC channel 0 (GPIO36):
-esp32os> adc readv 0
-# Expected: ~1650 mV (±50 mV with proper calibration)
-```
-
-### 3.8 GPIO Loopback Test
-
-Connect GPIO2 → GPIO4 with a jumper:
-```bash
-esp32os> gpio mode 2 out
-esp32os> gpio mode 4 in
-esp32os> gpio write 2 1
-esp32os> gpio read 4              # expected: 1
-esp32os> gpio write 2 0
-esp32os> gpio read 4              # expected: 0
-```
-
----
-
-## Performance Benchmarks
-
-| Metric | Target | Measurement Method |
-|--------|--------|--------------------|
-| Shell response latency | < 5 ms | `time` wrapper on test script |
-| WiFi connect time | < 10 s | Log timestamp delta |
-| Process create time | < 1 ms | `esp_timer_get_time()` before/after |
-| Log write (no file) | < 50 µs | Timer around OS_LOGI |
-| SPIFFS write 256B | < 10 ms | Timer around `os_fs_write_file` |
-| ADC read (×4 avg) | < 1 ms | Timer |
-
----
-
-## CI/CD Integration
-
-For automated checks in this repository:
-
-- Pull requests to `master` run build + harness sanity checks via `.github/workflows/pr-checks.yml`
-- Pushes to `master` run build + release pipeline via `.github/workflows/master-release.yml`
-
-Hardware-specific tests (GPIO wiring, ADC voltage verification, WiFi environment behavior) still require real devices.
-
-If you want to add emulator-based tests later, use QEMU as an additional tier:
-
-```yaml
-# .github/workflows/build.yml
-name: Build & Test
-on: [push, pull_request]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    container: espressif/idf:v5.2
-    steps:
-      - uses: actions/checkout@v3
-      - run: idf.py set-target esp32
-      - run: idf.py build
-      - name: Run unit tests (QEMU)
-        run: |
-          idf.py -C test/ build
-          python tools/run_tests_qemu.py
-```
-
-Note: Full hardware tests (WiFi, ADC, I2C) require real hardware. Use a self-hosted runner with a connected ESP32 for those.
-
----
-
-## Reporting Bugs
-
-When filing a bug report, include:
-
-1. Output of `uname -a`
-2. Output of `free` and `top`
-3. Output of `dmesg 50` at time of issue
-4. Steps to reproduce
-5. Expected vs actual behaviour
-6. IDF version (`idf.py --version`)
+Include the commit, board/target, ESP-IDF version, reproduction steps, expected result and observed result. Add relevant `uname -a`, `free`, `ps` and `dmesg` output. Remove credentials and private network information before sharing logs. Clearly list checks you could not run.

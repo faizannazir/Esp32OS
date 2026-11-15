@@ -13,7 +13,7 @@ import re
 # ────────────────────────────────────────────────────
 # Test Definitions
 # Each entry: (command, expected_substring, description)
-# expected_substring = "" means: command should not error
+# An empty expected substring requires a completed command with no output.
 # ────────────────────────────────────────────────────
 TESTS = [
     # System
@@ -55,7 +55,7 @@ TESTS = [
     # Logging
     ("loglevel info",         "info",              "loglevel set"),
     ("loglevel debug",        "debug",             "loglevel reset"),
-    ("dmesg 5",               "",                  "dmesg shows logs"),
+    ("dmesg 5",               "] ",                "dmesg shows logs"),
     ("logfile on",            "enabled",           "logfile enable"),
     ("logfile off",           "disabled",          "logfile disable"),
 
@@ -77,41 +77,60 @@ RESET = "\033[0m"
 BOLD  = "\033[1m"
 
 
-def send_cmd(ser: serial.Serial, cmd: str, wait_ms: int = 600) -> str:
-    ser.reset_input_buffer()
-    ser.write(f"{cmd}\r\n".encode())
-    time.sleep(wait_ms / 1000)
-    raw = ser.read(ser.in_waiting or 1024)
-    return raw.decode(errors="replace")
+PROMPT = b"esp32os> "
 
 
-def run_tests(port: str, baud: int, verbose: bool) -> bool:
+def send_cmd(ser: serial.Serial, cmd: str) -> tuple[bool, str]:
+    ser.write(f"{cmd}\r".encode())
+    raw = ser.read_until(PROMPT)
+    complete = raw.endswith(PROMPT)
+    if complete:
+        raw = raw[:-len(PROMPT)]
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", raw.decode(errors="replace"))
+    echo, _, output = clean.partition("\r\n")
+    return complete and echo.strip() == cmd, output.strip()
+
+
+def run_tests(port: str, baud: int, verbose: bool, skip_peripherals: bool = False) -> bool:
     print(f"\n{BOLD}ESP32OS Integration Tests{RESET}")
     print(f"Port: {port}  Baud: {baud}\n")
 
     try:
-        ser = serial.Serial(port, baud, timeout=3)
+        ser = serial.Serial(port, baud, timeout=4)
     except serial.SerialException as e:
         print(f"{RED}Cannot open {port}: {e}{RESET}")
         return False
 
-    # Wait for prompt
     time.sleep(1.0)
-    ser.write(b"\r\n")
-    time.sleep(0.3)
     ser.reset_input_buffer()
+    ser.write(b"\r")
+    prompt = ser.read_until(PROMPT)
+    ready = False
+    if prompt.endswith(PROMPT):
+        # A just-flashed board may print its first prompt before processing the
+        # newline above. Read past any queued prompt to a known command reply.
+        marker = "__esp32os_uart_ready__"
+        ser.write(f"echo {marker}\r".encode())
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline:
+            raw = ser.read_until(PROMPT)
+            if raw.endswith(PROMPT) and marker.encode() in raw[:-len(PROMPT)].splitlines():
+                ready = True
+                break
+    if not ready:
+        ser.close()
+        print(f"{RED}ESP32OS shell prompt did not respond{RESET}")
+        return False
 
     passed = 0
     failed = 0
     errors = []
 
     for cmd, expected, desc in TESTS:
-        response = send_cmd(ser, cmd, wait_ms=700)
-
-        # Strip ANSI codes for matching
-        clean = re.sub(r"\033\[[0-9;]*m", "", response)
-
-        ok = (expected == "") or (expected.lower() in clean.lower())
+        if skip_peripherals and cmd.startswith(("gpio ", "adc ")):
+            continue
+        complete, clean = send_cmd(ser, cmd)
+        ok = complete and (expected.lower() in clean.lower() if expected else not clean)
 
         if ok:
             print(f"  {GREEN}✓{RESET}  {desc:<45} ({cmd})")
@@ -147,7 +166,9 @@ if __name__ == "__main__":
     parser.add_argument("--port",    default="/dev/ttyUSB0", help="Serial port")
     parser.add_argument("--baud",    default=115200, type=int, help="Baud rate")
     parser.add_argument("--verbose", action="store_true", help="Show full responses")
+    parser.add_argument("--skip-peripherals", action="store_true",
+                        help="Skip GPIO and ADC commands when board wiring is unknown")
     args = parser.parse_args()
 
-    ok = run_tests(args.port, args.baud, args.verbose)
+    ok = run_tests(args.port, args.baud, args.verbose, args.skip_peripherals)
     sys.exit(0 if ok else 1)

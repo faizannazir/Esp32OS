@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 310" width="1000" height="310" role="img" aria-labelledby="title desc">
+  <title id="title">Connect to ESP32OS over USB</title>
+  <desc id="desc">Plug a USB data cable from the computer into the ESP32 board's USB-to-UART port. Open the detected serial port at 115200 baud to reach the ESP32OS shell.</desc>
+  <rect width="1000" height="310" rx="16" fill="#151819"/>
+  <g font-family="system-ui, sans-serif">
+    <text x="32" y="51" fill="#eef2ef" font-size="26" font-weight="650">USB serial connection</text>
+    <path d="M290 170h420" stroke="#80d7ae" stroke-width="3" fill="none"/>
+    <rect x="32" y="86" width="258" height="170" rx="9" fill="#24292a" stroke="#566360"/>
+    <rect x="710" y="86" width="258" height="170" rx="9" fill="#24292a" stroke="#566360"/>
+    <text x="55" y="124" fill="#eef2ef" font-size="21" font-weight="650">Computer</text>
+    <text x="55" y="156" fill="#b9c5c0" font-size="15">Serial terminal</text>
+    <rect x="54" y="176" width="214" height="49" rx="5" fill="#151819" stroke="#566360"/>
+    <text x="69" y="206" fill="#80d7ae" font-family="monospace" font-size="17">esp32os&gt;</text>
+    <text x="733" y="124" fill="#eef2ef" font-size="21" font-weight="650">ESP32 board</text>
+    <text x="733" y="156" fill="#b9c5c0" font-size="15">USB-to-UART bridge</text>
+    <text x="733" y="201" fill="#80d7ae" font-family="monospace" font-size="17">UART0 · 115200</text>
+    <text x="500" y="149" text-anchor="middle" fill="#eef2ef" font-size="17" font-weight="650">USB data cable</text>
+    <text x="500" y="200" text-anchor="middle" fill="#b9c5c0" font-size="14">USB-C or Micro-USB, depending on the board</text>
+    <text x="32" y="284" fill="#b9c5c0" font-size="14">Use the connector marked UART when the board has separate USB and UART connectors.</text>
+  </g>
+</svg>

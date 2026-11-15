@@ -18,6 +18,10 @@
 
 #define TAG "WEBPORTAL"
 
+#define PORTAL_WIFI_SCAN_LIMIT 16
+#define PORTAL_WIFI_MAX_SSID 32
+#define PORTAL_WIFI_MAX_PASSWORD 64
+
 #define TELEMETRY_HISTORY_DEPTH 24
 #define TELEMETRY_SAMPLE_PERIOD_MS 5000
 
@@ -119,8 +123,8 @@ static const telemetry_sample_t *telemetry_get_sample(size_t index_from_oldest)
     return &s_samples[idx];
 }
 
-extern const uint8_t dashboard_index_html_start[] asm("_binary_dashboard_index_html_start");
-extern const uint8_t dashboard_index_html_end[] asm("_binary_dashboard_index_html_end");
+extern const uint8_t dashboard_index_html_start[] asm("_binary_index_html_start");
+extern const uint8_t dashboard_index_html_end[] asm("_binary_index_html_end");
 
 static esp_err_t handle_root(httpd_req_t *req)
 {
@@ -130,22 +134,37 @@ static esp_err_t handle_root(httpd_req_t *req)
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
     return httpd_resp_send(req, (const char *)dashboard_index_html_start, html_len);
 }
+/* Hex keeps arbitrary SSID bytes valid in JSON and safe to round-trip. */
+static void encode_ssid(const char *ssid, char out[2 * PORTAL_WIFI_MAX_SSID + 1])
+{
+    static const char hex[] = "0123456789abcdef";
+    size_t length = strnlen(ssid, PORTAL_WIFI_MAX_SSID);
+    for (size_t i = 0; i < length; i++) {
+        uint8_t byte = (uint8_t)ssid[i];
+        out[2 * i] = hex[byte >> 4];
+        out[2 * i + 1] = hex[byte & 15];
+    }
+    out[2 * length] = '\0';
+}
+
 static esp_err_t handle_status(httpd_req_t *req)
 {
     kernel_stats_t st;
     os_kernel_get_stats(&st);
     os_net_status_t netst = {0};
     os_wifi_get_status(&netst);
+    char ssid[2 * PORTAL_WIFI_MAX_SSID + 1];
+    encode_ssid(netst.connected ? netst.ssid : "", ssid);
 
     char buf[768];
     snprintf(buf, sizeof(buf),
-             "{\"free_heap\":%u,\"total_heap\":%u,\"min_free_heap\":%u,\"largest_free_block\":%u,\"cpu_load_pct\":%u,\"procs\":%u,\"uptime_s\":%u,\"net\":{\"connected\":%s,\"ip\":\"%s\",\"gw\":\"%s\"}}",
+             "{\"free_heap\":%u,\"total_heap\":%u,\"min_free_heap\":%u,\"largest_free_block\":%u,\"cpu_load_pct\":%u,\"procs\":%u,\"uptime_s\":%u,\"net\":{\"connected\":%s,\"ip\":\"%s\",\"gw\":\"%s\",\"ssid_hex\":\"%s\"}}",
              (unsigned)st.free_heap_bytes, (unsigned)st.total_heap_bytes,
              (unsigned)st.min_free_heap_bytes, (unsigned)st.largest_free_block,
              (unsigned)st.cpu_load_pct, (unsigned)st.process_count,
              (unsigned)(st.uptime_ms / 1000), netst.connected ? "true" : "false",
              netst.connected ? netst.ip : "",
-             netst.connected ? netst.gw : "");
+             netst.connected ? netst.gw : "", ssid);
     return send_json(req, buf);
 }
 
@@ -272,6 +291,79 @@ static esp_err_t handle_ota(httpd_req_t *req)
     return send_json(req, buf);
 }
 
+static esp_err_t handle_wifi_scan(httpd_req_t *req)
+{
+    os_wifi_scan_result_t networks[PORTAL_WIFI_SCAN_LIMIT] = {0};
+    int count = os_wifi_scan(networks, PORTAL_WIFI_SCAN_LIMIT);
+    if (count < 0) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
+                                  "Wi-Fi scan failed. Try again.");
+    }
+
+    httpd_resp_set_type(req, "application/json");
+    esp_err_t ret = httpd_resp_sendstr_chunk(req, "[");
+    bool first = true;
+    for (int i = 0; i < count && ret == ESP_OK; i++) {
+        if (!networks[i].ssid[0]) continue;
+        char ssid[2 * PORTAL_WIFI_MAX_SSID + 1];
+        encode_ssid(networks[i].ssid, ssid);
+
+        char entry[128];
+        snprintf(entry, sizeof(entry), "%s{\"ssid_hex\":\"%s\",\"rssi\":%d,\"open\":%s}",
+                 first ? "" : ",", ssid, networks[i].rssi, networks[i].open ? "true" : "false");
+        ret = httpd_resp_sendstr_chunk(req, entry);
+        first = false;
+    }
+    if (ret == ESP_OK) ret = httpd_resp_sendstr_chunk(req, "]");
+    if (ret == ESP_OK) ret = httpd_resp_sendstr_chunk(req, NULL);
+    return ret;
+}
+
+static esp_err_t handle_wifi_connect(httpd_req_t *req)
+{
+    char content_type[32];
+    if (httpd_req_get_hdr_value_str(req, "Content-Type", content_type, sizeof(content_type)) != ESP_OK ||
+        strcmp(content_type, "application/octet-stream") != 0) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Wi-Fi request.");
+    }
+
+    /* Body: one length byte, SSID bytes, then password bytes. */
+    uint8_t body[1 + PORTAL_WIFI_MAX_SSID + PORTAL_WIFI_MAX_PASSWORD];
+    if (req->content_len < 2 || req->content_len > sizeof(body)) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Wi-Fi request length.");
+    }
+
+    size_t received = 0;
+    while (received < req->content_len) {
+        int bytes = httpd_req_recv(req, (char *)body + received, req->content_len - received);
+        if (bytes <= 0) return ESP_FAIL;
+        received += (size_t)bytes;
+    }
+
+    size_t ssid_len = body[0];
+    if (!ssid_len || ssid_len > PORTAL_WIFI_MAX_SSID || ssid_len >= received ||
+        received - 1 - ssid_len > PORTAL_WIFI_MAX_PASSWORD ||
+        memchr(body + 1, 0, received - 1)) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid network name or password.");
+    }
+
+    char ssid[PORTAL_WIFI_MAX_SSID + 1] = {0};
+    char password[PORTAL_WIFI_MAX_PASSWORD + 1] = {0};
+    memcpy(ssid, body + 1, ssid_len);
+    size_t password_len = received - 1 - ssid_len;
+    memcpy(password, body + 1 + ssid_len, password_len);
+    if (password_len && password_len < 8) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                                  "Wi-Fi passwords must contain at least 8 bytes.");
+    }
+
+    if (os_wifi_connect(ssid, password) != ESP_OK) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
+                                  "Could not join the network. Check the password and signal.");
+    }
+    return send_text(req, "Connected. Check the station IP below.");
+}
+
 static esp_err_t handle_process_action(httpd_req_t *req)
 {
     char body[128] = {0};
@@ -364,7 +456,7 @@ esp_err_t webportal_start(void)
     }
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers = 12;
+    config.max_uri_handlers = 13;
     config.stack_size = 8192;
 
     esp_err_t ret = httpd_start(&server, &config);
@@ -386,6 +478,11 @@ esp_err_t webportal_start(void)
     httpd_uri_t uri_ota_rollback = { .uri = "/api/ota/rollback", .method = HTTP_POST, .handler = handle_ota_rollback };
     httpd_uri_t uri_reboot = { .uri = "/api/system/reboot", .method = HTTP_POST, .handler = handle_reboot };
 
+    httpd_uri_t uri_wifi_scan = { .uri = "/api/wifi/scan", .method = HTTP_GET, .handler = handle_wifi_scan };
+    httpd_uri_t uri_wifi_connect = { .uri = "/api/wifi/connect", .method = HTTP_POST, .handler = handle_wifi_connect };
+
+    httpd_register_uri_handler(server, &uri_wifi_scan);
+    httpd_register_uri_handler(server, &uri_wifi_connect);
     httpd_register_uri_handler(server, &uri_root);
     httpd_register_uri_handler(server, &uri_status);
     httpd_register_uri_handler(server, &uri_processes);

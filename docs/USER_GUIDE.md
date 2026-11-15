@@ -1,205 +1,245 @@
-# ESP32OS User Guide
+# ESP32OS user guide
 
-## What You Need
+[Documentation](README.md) · [Dashboard](DASHBOARD.md) · [Testing](TESTING.md)
 
-- ESP-IDF 6.0 installed and exported in your shell session
-- Python 3.8 or newer
-- A supported ESP32 board connected over USB
-- A serial terminal or `idf.py monitor`
+Build and flash the firmware, start with the UART console, then enable the services you need.
 
-## Build
+## Prepare your board
 
-From the repository root:
+- Use an ESP32, ESP32-S3 or ESP32-C3 development board with at least 4 MB flash for the shipped partition layout.
+- Install [ESP-IDF 6.0](https://docs.espressif.com/projects/esp-idf/en/v6.0/esp32/get-started/) and use its configured Python environment.
+- Connect a USB data cable and identify the board's serial port. The firmware shell reads **UART0 at 115200 baud**. Native USB and a USB-to-UART bridge are not interchangeable on every board.
+- Check your board's schematic before connecting peripherals. Chip family support does not establish safe pin assignments for every board.
+
+## Connect over USB and open the terminal
+
+![USB data cable from a computer to the ESP32 board’s USB-to-UART bridge](assets/usb-uart-connection.svg)
+
+1. Connect the board to your computer with a **USB data cable**. Use the board's USB-to-UART connector if it has separate native USB and UART ports.
+2. Find the serial port. Compare the port list before and after plugging in the board.
+
+   | System | How to find the port |
+   |---|---|
+   | macOS | Run `ls /dev/cu.*`. The test board appeared as `/dev/cu.usbserial-0001`. |
+   | Linux | Run `ls /dev/ttyUSB* /dev/ttyACM*` and identify the new port. |
+   | Windows | Open **Device Manager → Ports (COM & LPT)** and note the new COM port. |
+
+3. For a board that already has ESP32OS installed, open the monitor from the project directory in an ESP-IDF terminal. Substitute your own port.
+
+   ```bash
+   idf.py -p /dev/cu.usbserial-0001 monitor
+   ```
+
+   On macOS you can also open the shell without the ESP-IDF monitor:
+
+   ```bash
+   screen /dev/cu.usbserial-0001 115200
+   ```
+
+4. Press **Enter** and look for `esp32os>`. Type `help` or `uname -a`. The test board returned this over UART:
+
+   ```text
+   esp32os> uname -a
+   esp32os ESP32  WiFi  IDF-v6.0  2 core(s)  Flash:4MB
+   ```
+
+5. Exit the ESP-IDF monitor with **Ctrl+]**. In `screen`, press **Ctrl+A**, then **K**, and confirm. Close the serial session before flashing or running the integration script.
+
+If you only see an LED and no serial port, try a known data cable and the UART connector. If the port opens but the prompt is missing, check 115200 baud, press **Enter**, and reset the board if needed.
+
+## Build and flash
+
+Run from the repository root in an ESP-IDF terminal. On Linux/macOS, activate an existing installation if needed:
 
 ```bash
-. $IDF_PATH/export.sh
+. "$IDF_PATH/export.sh"
+idf.py --version
 idf.py set-target esp32
 idf.py build
-```
-
-If you are using a different board, select its target: `esp32`, `esp32s3`, or `esp32c3`.
-
-## Flash
-
-```bash
-idf.py -p /dev/ttyUSB0 flash
-```
-
-If you already know the port and want to flash and open the console in one step:
-
-```bash
 idf.py -p /dev/ttyUSB0 flash monitor
 ```
 
-## First Boot
+Replace `esp32` with `esp32s3` or `esp32c3` to match the chip. Replace the port with your device: for example, `/dev/cu.usbserial-XXXX` on macOS or `COM3` on Windows. On Windows, use the ESP-IDF terminal instead of the Unix `export.sh` command.
 
-On boot, ESP32OS initializes its core services and UART shell. Remote services are disabled by default, so you should normally see the boot banner followed by the `esp32os>` prompt:
+`set-target` regenerates build configuration. Keep any local configuration changes you need before switching targets. Exit the IDF serial monitor with **Ctrl+]**.
 
-```text
-ESP32OS Embedded OS v1.0.0
-Type 'help' for commands
+## First commands
 
-Web portal disabled (secure default)
-Telnet disabled (secure default)
-esp32os>
-```
-
-Useful first commands:
+Boot logs show initialization results. When you reach `esp32os>`, enter the following commands individually:
 
 ```text
 help
-ps
+uname -a
+uptime
 free
+ps
 df
-wifi status
+dmesg 10
 ```
 
-## Optional web portal
+`ps` shows ESP32OS-managed tasks. `top` prints a snapshot rather than a continuously updating Unix `top` interface. Memory values, process IDs and log lines depend on the build and board.
 
-The web control portal is disabled by default. It currently has no authentication and exposes shell/device-control actions. Only enable it on an isolated development network that you trust.
+Use `help` for the command list, `wifi --help` for the registered usage, or `wifi` without arguments for its subcommand help. The shell accepts double-quoted strings. It does not provide Bash scripting, pipes or redirection.
 
-To opt in, run:
+## Files and variables
+
+Use root-level filenames with the default SPIFFS filesystem:
+
+```text
+write /hello.txt "Hello from ESP32OS"
+cat /hello.txt
+append /hello.txt "Another message"
+cat /hello.txt
+mv /hello.txt /notes.txt
+ls /
+rm /notes.txt
+```
+
+SPIFFS has no native directories. Although `mkdir`, `cd` and path-prefix helpers exist, they do not establish a complete directory tree. See [storage behavior](ARCHITECTURE.md#storage). A failed filesystem mount can trigger formatting under the current configuration.
+
+Environment values are shared and persisted in NVS:
+
+```text
+export DEVICE_NAME=bench
+printenv DEVICE_NAME
+echo $DEVICE_NAME
+env
+unset DEVICE_NAME
+```
+
+Environment variables do not automatically configure services. For example, exporting `WIFI_SSID` does not connect the device to Wi-Fi.
+
+## Connect to Wi-Fi
+
+Enter your local credentials at the UART prompt:
+
+```text
+wifi scan
+wifi connect "Your SSID" "Your password"
+wifi status
+ifconfig
+```
+
+Use the IP returned by `wifi status` for the dashboard or Telnet. For diagnostics, replace the following address with your gateway:
+
+```text
+ping 192.168.1.1 -c 3
+```
+
+The `wifi connect` handler connects the current session; it does not call the explicit `os_wifi_save_credentials()` persistence API. Firmware developers can use that API for boot-time reconnect from NVS. Keep credentials out of commits, screenshots and shared serial logs.
+
+## Background commands and timers
+
+```text
+run echo background
+at 5000 echo delayed
+every 10000 uptime
+jobs
+```
+
+`run` starts a background command, `at` uses a delay in milliseconds, and `every` repeats at a millisecond interval. Use the generated job name shown by `jobs` to stop a repeating job:
+
+```text
+killjob <job-name>
+```
+
+Software timers are separate from scheduled shell commands:
+
+```text
+timer create heartbeat 1000 1
+timer start heartbeat
+timer list
+timer stop heartbeat
+timer delete heartbeat
+```
+
+The shell timer callback records timer activity; a custom C callback is needed for application-specific work. Jobs and timers use RAM and do not survive reboot.
+
+## IPC and MQTT
+
+Create a named queue with 16-byte messages and capacity for four messages:
+
+```text
+msgq create demo 16 4
+msgq send demo hello
+msgq recv demo 1000
+msgq delete demo
+```
+
+For MQTT, connect Wi-Fi first. Substitute the address of a broker you control:
+
+```text
+mqtt config mqtt://192.168.1.20:1883
+mqtt connect
+mqtt status
+mqtt sub lab/esp32/status -q 0
+mqtt pub lab/esp32/status online -q 0
+mqtt pubhex lab/esp32/raw DEADBEEF -q 0
+mqtt disconnect
+```
+
+Connection is asynchronous: confirm `mqtt status` reports a connection before publishing. `pub` takes a text argument; `pubhex` sends binary bytes encoded as hexadecimal. The example broker connection is plaintext.
+
+## Hardware commands
+
+| Command | Purpose |
+|---|---|
+| `gpio info` | Inspect GPIO information |
+| `gpio mode <pin> out` | Configure an output |
+| `gpio write <pin> <0\|1>` | Set an output level |
+| `gpio read <pin>` | Read a digital input |
+| `adc read <channel>` | Read a raw ADC value |
+| `adc readv <channel>` | Read a voltage value using the driver's conversion |
+| `i2c scan <sda> <scl>` | Initialize/probe an I²C bus on selected pins |
+| `pwm init <channel> <gpio> <frequency_hz>` | Configure a PWM output |
+| `pwm duty <channel> <percent>` | Set PWM duty cycle |
+| `pwm deinit <channel>` | Release a PWM channel |
+
+The angle-bracket fields are placeholders. Choose pins from your board's schematic and the driver implementation; flash, boot-strapping, USB and input-only pins have target-specific constraints. These examples do not validate any connected sensor or actuator.
+
+## Network access
+
+All three options below are **disabled by default**. Change them locally under **ESP32OS Security and Network Services**:
 
 ```bash
 idf.py menuconfig
+idf.py build
+idf.py -p /dev/ttyUSB0 flash monitor
 ```
 
-Open **ESP32OS Security and Network Services**, enable the web portal, save the configuration, then rebuild and flash. Do not expose the portal to the public internet or an untrusted LAN.
+| Option | What enabling it does |
+|---|---|
+| `CONFIG_ESP32OS_ENABLE_WEB_PORTAL` | Starts the unauthenticated HTTP dashboard and control API; see [Dashboard](DASHBOARD.md) |
+| `CONFIG_ESP32OS_ENABLE_TELNET` | Enables the plaintext shell on port 2222; requires non-empty local username/password settings |
+| `CONFIG_ESP32OS_ENABLE_AP_FALLBACK` | Enables the device-hosted open access point named `ESP32OS` |
 
-## Connect to the Shell
+Only enable remote interfaces on an isolated, trusted development network. Do not expose the portal to the internet. There are no default Telnet credentials; set your own in `menuconfig`, keep `sdkconfig` local, then connect with `telnet <board-ip> 2222`.
 
-You can use the UART console or Telnet for command-line access.
+## OTA prerequisites
 
-### UART
+The `ota` command exists, but the default [partition table](../partitions.csv) has only a `factory` application. It has no `ota_0`, `ota_1` or `otadata` partitions, so it is not ready for an OTA update/rollback workflow.
 
-Open `idf.py monitor` or any serial terminal at 115200 baud.
+Before using `ota update`, provide a flash layout that fits the device and includes OTA metadata and application slots, configure the bootloader features required by your rollback policy, and validate the complete update path on hardware. Partition changes may overwrite existing data. Continue using serial flashing with the default layout.
 
-Example session:
+You can inspect the current state without starting an update:
 
 ```text
-esp32os> help
-esp32os> uname -a
-esp32os ESP32-S3  WiFi  IDF-v6.0  2 core(s)  Flash:4MB
-esp32os> free
-Heap:                     334684      116600      218084
+ota status
 ```
 
-In VS Code, the normal workflow is:
-
-1. Build from the integrated terminal with `idf.py build`
-2. Flash from the integrated terminal with `idf.py -p <port> flash`
-3. Use the serial monitor or monitor output panel for the shell UI
-
-### Optional Telnet
-
-Telnet is disabled by default. It is plaintext and does not encrypt credentials or commands. Prefer UART. If you enable Telnet for an isolated development network:
-
-1. Run `idf.py menuconfig`.
-2. Open **ESP32OS Security and Network Services**.
-3. Enable Telnet and set a non-empty username and password locally.
-4. Rebuild and flash the firmware.
-5. Connect only from a trusted network:
-
-```bash
-telnet <esp32-ip> 2222
-```
-
-There are no default credentials. Never commit local `sdkconfig` files or reuse production passwords.
-
-### Optional Wi-Fi AP fallback
-
-The device-hosted AP fallback is disabled by default. If explicitly enabled in the same menuconfig section, the current fallback AP is open. Do not enable it on an untrusted or production network.
-
-## Common Shell Commands
-
-- `help` shows all shell commands
-- `ps` lists running processes
-- `top` shows heap and process status
-- `ls`, `cd`, `pwd`, `cat`, `write`, `append`, `rm`, `mkdir`, and `mv` manage files
-- `wifi scan`, `wifi connect`, `wifi status`, `ping`, and `http` handle networking
-- `gpio`, `adc`, and `i2c scan` expose hardware controls
-- `dmesg` shows recent logs
-
-Feature module commands:
-
-- `pwm` controls PWM channels (`init`, `duty`, `freq`, `deinit`, `status`)
-- `timer` creates and manages software timers (`create`, `start`, `stop`, `restart`, `delete`, `list`)
-- `msgq` manages message queues (`create`, `delete`, `send`, `recv`, `list`)
-- `event` manages event groups (`create`, `delete`, `set`, `clear`, `get`, `wait`)
-- `env` lists environment variables, while `export`, `unset`, and `printenv` manage values
-- `run` launches a command in the background, `at` schedules a one-shot command, and `every` schedules a repeating command
-- `jobs` lists scheduled commands and `killjob` cancels one by name
-- `mqtt` manages broker connectivity and publish/subscribe flow
-- `ota` manages firmware updates (`update`, `status`, `confirm`, `rollback`)
-
-## Feature Module Quickstart
-
-Example session:
-
-```text
-esp32os> pwm init 0 2 5000
-esp32os> pwm duty 0 20
-
-esp32os> msgq create q1 16 4
-esp32os> msgq send q1 hello
-esp32os> msgq recv q1 1000
-
-esp32os> mqtt config mqtt://broker.hivemq.com
-esp32os> mqtt connect
-esp32os> mqtt pub dev/status online -q 1
-esp32os> mqtt pubhex dev/raw DEADBEEF
-
-esp32os> export WIFI_SSID=myssid
-esp32os> printenv WIFI_SSID
-esp32os> run echo background hello
-esp32os> at 5000 echo run later
-esp32os> every 1000 ps
-
-esp32os> ota status
-```
-
-## Example Output
-
-When the device boots successfully, you should see output similar to:
-
-```text
-ESP32OS Embedded OS v1.0.0
-Type 'help' for commands
-
-esp32os> uname -a
-esp32os ESP32-S3  WiFi  IDF-v6.0  2 core(s)  Flash:4MB
-
-esp32os> ls /
-logs
-tmp
-etc
-```
-
-If you see the prompt and commands return output, the shell is working.
-
-## Test
-
-Run the integration test script after flashing:
-
-```bash
-python3 -m pip install pyserial
-python3 tools/test_integration.py --port /dev/ttyUSB0 --baud 115200
-```
-
-The script checks common shell, filesystem, logging, GPIO, ADC, and NVS commands.
-
-You can also run feature component suites directly from the shell:
-
-```text
-esp32os> test mqtt
-esp32os> test ipc
-esp32os> test ota
-esp32os> test pwm
-esp32os> test all
-```
+`ota confirm` and `ota rollback` apply only when the running image and partition state support those operations. Their presence in the dashboard is not evidence that the default firmware can roll back.
 
 ## Troubleshooting
 
-- If build fails on the first configure step, make sure `IDF_PATH` is exported in the current shell.
-- If the serial monitor does not connect, verify the USB port and baud rate.
-- If Telnet does not start, confirm the board has joined WiFi and the network stack initialized correctly.
+| Symptom | Check |
+|---|---|
+| `idf.py` is missing | Open the ESP-IDF terminal or activate the installed toolchain |
+| Target/build mismatch | Confirm `idf.py set-target` matches the chip; review regenerated configuration |
+| Serial port cannot open | Confirm the port, USB driver and data cable; close other serial monitors |
+| Logs appear but no shell input | Confirm UART0 routing and 115200 baud; native USB logs may use another interface |
+| Dashboard does not load | Enable the portal, rebuild/flash, connect Wi-Fi and open `http://<station-ip>/` on the same network |
+| Browser command produces no text | Some component output bypasses shell capture; retry via UART |
+| `cd` or directory listing fails | Use root-level SPIFFS files; see [storage limits](ARCHITECTURE.md#storage) |
+| OTA has no update destination | The default layout has no OTA slots |
+
+Use [Testing](TESTING.md) to gather reproducible results. Hardware test scripts change files, NVS values and GPIO state; review their operations before running them on a connected project.

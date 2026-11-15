@@ -2,58 +2,246 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0b1220"><title>ESP32OS · Device Console</title>
+<meta name="theme-color" content="#151819"><title>ESP32OS · Device Console</title>
 <style>
-:root{color-scheme:dark;--bg:#0b1220;--panel:#111c2d;--panel2:#162338;--line:#26364d;--text:#e6edf7;--muted:#8da1b9;--accent:#63d5c2;--blue:#78a9ff;--red:#ff7d86;--amber:#f5c66a;--radius:16px}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(1000px 600px at 10% -10%,#17364b 0,transparent 55%),var(--bg);color:var(--text);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-button,input{font:inherit}[hidden]{display:none!important}button{border:1px solid var(--line);border-radius:10px;background:#20334c;color:var(--text);padding:9px 12px;cursor:pointer}button:hover{border-color:var(--accent)}button:disabled{opacity:.45;cursor:not-allowed}.danger{background:#482530;border-color:#703743}.primary{background:#15584f;border-color:#287d70}.muted{color:var(--muted)}.small{font-size:12px}
-header{max-width:1440px;margin:auto;padding:24px 26px 14px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.brand{display:flex;align-items:center;gap:13px}.logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(145deg,#65ddc8,#3c8cb4);display:grid;place-items:center;color:#08212b;font-size:22px;font-weight:900}.brand h1{margin:0;font-size:20px;letter-spacing:-.04em}.brand p{margin:2px 0 0;color:var(--muted);font-size:12px}.connection{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:var(--amber)}.dot.online{background:var(--accent);box-shadow:0 0 12px #63d5c288}.dot.offline{background:var(--red)}
-main{max-width:1440px;margin:auto;padding:10px 26px 40px}.hero{display:flex;justify-content:space-between;align-items:end;gap:16px;margin:10px 0 20px;flex-wrap:wrap}.hero h2{font-size:28px;letter-spacing:-.04em;margin:0}.hero p{margin:4px 0 0;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}
-.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}.metric,.panel{background:linear-gradient(155deg,#15243a,#101a2a);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 12px 35px #0002}.metric{padding:16px}.metric .label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.12em}.metric .value{font-size:26px;font-weight:750;letter-spacing:-.04em;margin:8px 0 1px}.metric .hint{color:var(--muted);font-size:12px}
-.layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,.9fr);gap:14px;align-items:start}.stack{display:grid;gap:14px}.panel{padding:17px;min-width:0}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.panel h3{margin:0;font-size:15px;letter-spacing:-.02em}.pill{font-size:11px;color:var(--accent);border:1px solid #2c675f;border-radius:999px;padding:4px 8px}
-.chart{width:100%;height:170px;display:block}.chart-legend{display:flex;gap:18px;color:var(--muted);font-size:11px;margin-top:8px}.legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:var(--accent)}
-.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:560px}th,td{padding:10px 9px;border-bottom:1px solid #24344a;text-align:left;font-size:12px}th{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em}td{color:#d9e4f1}.state{display:inline-block;border-radius:6px;padding:3px 6px;background:#21374a;color:#a8d9d0;font-size:10px}.row-actions{display:flex;gap:5px}.row-actions button{padding:5px 7px;font-size:10px}.terminal{background:#080f1b;border:1px solid #24344a;border-radius:12px;overflow:hidden}.terminal-bar{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid #24344a;color:var(--muted);font-size:11px}.terminal-bar i{width:7px;height:7px;border-radius:50%;background:#ff777e}.terminal-bar i:nth-child(2){background:#f5c66a}.terminal-bar i:nth-child(3){background:#63d5c2}.terminal pre{margin:0;padding:13px;min-height:125px;max-height:230px;overflow:auto;white-space:pre-wrap;word-break:break-word;color:#a9e6d4;font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace}.command{display:flex;gap:8px;margin-top:9px}.command input,.field input{min-width:0;width:100%;border:1px solid var(--line);border-radius:10px;background:#0b1524;color:var(--text);padding:10px 12px;outline:none}.command input:focus,.field input:focus{border-color:var(--accent)}.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tab{padding:7px 10px;background:transparent;color:var(--muted);font-size:12px}.tab.active{background:#1a3a42;color:var(--accent);border-color:#2b655d}.tab-view{display:none}.tab-view.active{display:block}.info-list{display:grid;gap:9px}.info{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #24344a}.info:last-child{border:0}.info span:first-child{color:var(--muted)}.field{display:grid;gap:6px;margin:10px 0}.field label{font-size:11px;color:var(--muted)}.notice{border:1px solid #705b32;background:#352c1c;color:#f2d9a4;border-radius:10px;padding:10px 12px;font-size:11px;margin-top:12px}.footer{color:#637992;font-size:11px;text-align:center;padding:22px}
-.settings-overlay{position:fixed;inset:0;background:#030914bb;backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:18px;z-index:20}
-.settings-overlay.open{display:flex}.settings-dialog{width:min(620px,100%);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 24px 80px #0009}
-.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.setting{display:grid;gap:7px}.setting label{font-size:12px;color:var(--muted)}.setting select,.setting input[type=text]{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text)}
-.setting-checks{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.setting-checks label{display:flex;align-items:center;gap:8px;color:var(--text);font-size:12px}.settings-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}.settings-help{font-size:11px;color:var(--muted);margin:12px 0 0}
-body[data-theme=light]{--bg:#edf2f7;--panel:#fff;--panel2:#f5f8fc;--line:#d4deea;--text:#142235;--muted:#60738a;color-scheme:light;background:radial-gradient(1000px 600px at 10% -10%,#d4edf0 0,transparent 55%),var(--bg)}
-body[data-density=compact] .metric{padding:10px}body[data-density=compact] .panel{padding:12px}body[data-density=compact] .metrics,body[data-density=compact] .stack{gap:8px}body[data-density=compact] main{padding-top:4px}
-@media(max-width:560px){.settings-grid,.setting-checks{grid-template-columns:1fr}.settings-dialog{padding:16px}}
-@media(max-width:980px){.layout{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:540px){header,main{padding-left:14px;padding-right:14px}.metrics{gap:8px}.metric{padding:12px}.metric .value{font-size:21px}.hero h2{font-size:23px}.actions button{flex:1}.panel{padding:13px}}
+:root {
+  color-scheme: dark;
+  --bg: #151819;
+  --panel: #1b1f20;
+  --panel2: #24292a;
+  --line: #363d3e;
+  --text: #eef2ef;
+  --muted: #a4afab;
+  --accent: #80d7ae;
+  --red: #ffa9a1;
+  --amber: #e4c18b;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, sans-serif; }
+body[data-theme=light] {
+  color-scheme: light;
+  --bg: #f3f5f2; --panel: #fff; --panel2: #edf1ee; --line: #cdd6d0;
+  --text: #1d2924; --muted: #506157; --red: #a32e27; --amber: #775014;
+}
+button, input, select { font: inherit; }
+button {
+  padding: 7px 12px; min-height: 34px; border: 1px solid var(--line);
+  border-radius: 5px; background: var(--panel2); color: var(--text); cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--muted); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+.danger { color: var(--red); }
+.primary { background: var(--accent-soft, #255541); color: #fff; border-color: transparent; }
+.muted, .small, .hint { color: var(--muted); }
+.small, .hint { font-size: 12px; }
+[hidden] { display: none !important; }
+header { border-bottom: 1px solid var(--line); }
+.topbar, main { width: min(100% - 48px, 1240px); margin-inline: auto; }
+.topbar { min-height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+.brand h1 { font: 600 15px var(--mono); margin: 0; }
+.brand span { color: var(--muted); font-size: 13px; }
+.connection, .actions, .row-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.connection { color: var(--muted); font-size: 12px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
+.dot.online { background: var(--accent); }
+.dot.offline { background: var(--red); }
+main { padding-block: 25px 20px; }
+.hero h2 { font-size: clamp(22px, 4vw, 29px); font-weight: 650; margin: 0 0 15px; overflow-wrap: anywhere; }
+.metrics {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px;
+  border: 1px solid var(--line); border-radius: 7px; background: var(--panel);
+}
+.metric { padding: 13px 16px; min-width: 0; }
+.metric + .metric { border-left: 1px solid var(--line); }
+.metric .label { color: var(--muted); font-size: 12px; }
+.metric .value { margin-block: 3px; font: 600 clamp(17px, 3vw, 23px)/1.25 var(--mono); overflow-wrap: anywhere; }
+.panel { min-width: 0; padding: 15px 16px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.panel h3, .settings-dialog h3 { margin: 0; font-size: 15px; font-weight: 650; }
+.chart { width: 100%; height: 149px; display: block; }
+.terminal pre {
+  margin: 0; padding: 12px; min-height: 105px; max-height: 250px; overflow: auto;
+  white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 5px; color: var(--text); font: 12px/1.55 var(--mono);
+}
+.command { display: flex; gap: 8px; margin-top: 8px; }
+.command input, .setting input[type=text], .setting select {
+  min-width: 0; width: 100%; padding: 7px 10px; border: 1px solid var(--line);
+  border-radius: 5px; background: var(--bg); color: var(--text);
+}
+.command input { font-family: var(--mono); }
+.table-wrap { overflow: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 510px; }
+th, td { padding: 8px 7px; border-bottom: 1px solid var(--line); text-align: left; }
+th { color: var(--muted); font-size: 11px; font-weight: 600; white-space: nowrap; }
+td { font: 12px var(--mono); }
+tbody tr:last-child td { border-bottom: 0; }
+.state { color: var(--muted); }
+.row-actions { flex-wrap: nowrap; gap: 4px; }
+.row-actions button { font: 12px system-ui, sans-serif; padding: 4px 7px; }
+.info { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.info:last-child { border: 0; }
+.info span { color: var(--muted); }
+.info strong { font: 500 12px var(--mono); align-self: center; }
+.notice { margin: 13px 0 0; color: var(--amber); font-size: 12px; }
+.settings-dialog {
+  width: min(560px, 100% - 28px); max-height: 90vh; padding: 20px; border: 1px solid var(--line);
+  border-radius: 8px; color: var(--text); background: var(--panel);
+}
+.settings-dialog::backdrop { background: #0009; }
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.setting { display: grid; gap: 4px; }
+.setting label { color: var(--muted); font-size: 12px; }
+.settings-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+body[data-density=compact] .metric, body[data-density=compact] .panel { padding: 10px; }
+body[data-density=compact] .widget-area { gap: 8px; }
+@media (max-width: 600px) {
+  .topbar, main { width: calc(100% - 28px); }
+  .topbar { padding-block: 10px; flex-wrap: wrap; gap: 8px; }
+  main { padding-top: 16px; }
+  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric { padding: 10px; }
+  .metric:nth-child(odd) { border-left: 0; }
+  .metric:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .settings-grid { grid-template-columns: 1fr; }
+}
+
+.workspace { width: min(100% - 48px, 1240px); margin-inline: auto; display: grid; grid-template-columns: 166px minmax(0, 1fr); gap: 25px; }
+.workspace main { width: auto; margin: 0; min-width: 0; }
+.app-nav { padding-top: 25px; border-right: 1px solid var(--line); padding-right: 14px; }
+.app-nav a { display: block; padding: 9px 10px; margin-bottom: 4px; border-radius: 5px; color: var(--muted); text-decoration: none; white-space: nowrap; }
+.app-nav a:hover { color: var(--text); background: var(--panel); }
+.app-nav a[aria-current=page] { color: var(--text); background: var(--panel2); box-shadow: inset 2px 0 var(--accent); }
+.screen > h2 { margin: 0 0 15px; font-size: clamp(22px,4vw,29px); font-weight: 650; }
+.screen > .panel + .panel { margin-top: 14px; }
+.widget-area { display: grid; gap: 14px; }
+.widget-area .metrics { margin-bottom: 0; }
+.widget-shortcuts { display: flex; flex-wrap: wrap; gap: 9px; }
+.widget-shortcuts a { color: var(--text); text-underline-offset: 4px; display: inline-block; padding: 5px 8px; margin: 0 0 0 -8px; }
+.widget-order { list-style: none; padding: 0; margin: 8px 0; }
+.widget-order li { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.widget-order label { display: flex; align-items: center; gap: 6px; }
+#networkList { padding: 0; margin: 8px 0; list-style: none; }
+#networkList button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; margin-bottom: 6px; }
+#networkList button > span:first-child, #selectedNetwork, #wifiNetwork { overflow-wrap: anywhere; }
+#networkList button[aria-pressed=true] { border-color: var(--accent); }
+#networkList .small { white-space: nowrap; }
+#wifiForm { margin-top: 14px; }
+#wifiForm .setting { max-width: 380px; margin-bottom: 9px; }
+#wifiPassword { padding: 8px 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 5px; }
+@media (max-width: 760px) {
+ .workspace { width: calc(100% - 28px); display: block; }
+ .app-nav { padding: 8px 0; border-right: 0; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 2px; }
+ .app-nav a { margin: 0; }
+ .app-nav a[aria-current=page] { box-shadow: inset 0 -2px var(--accent); }
+}
 </style>
 </head>
 <body>
-<header><div class="brand"><div class="logo">E</div><div><h1>ESP32OS <span class="muted">/ Console</span></h1><p>Embedded device control center</p></div></div><div class="connection"><span id="connDot" class="dot"></span><span id="connection">Connecting to device…</span><button id="settingsBtn" aria-haspopup="dialog">⚙ Settings</button><button id="refreshBtn">Refresh</button></div></header>
+<header><div class="topbar">
+  <div class="brand"><h1>ESP32OS</h1><span>Device console</span></div>
+  <div class="connection"><span id="connDot" class="dot"></span><span id="connection" role="status">Connecting…</span><button id="refreshBtn">Refresh</button><button id="settingsBtn" aria-haspopup="dialog">Settings</button></div>
+</div></header>
+<div class="workspace">
+<nav class="app-nav" aria-label="Device apps">
+  <a href="#overview" data-app="overview">Overview</a>
+  <a href="#terminal" data-app="terminal">Terminal</a>
+  <a href="#processes" data-app="processes">Processes</a>
+  <a href="#wifi" data-app="wifi">Wi-Fi</a>
+  <a href="#system" data-app="system">System</a>
+</nav>
 <main>
-<section class="hero"><div><h2>Device overview</h2><p>Live telemetry, task management and command access from your browser.</p></div><div class="actions"><button id="rebootBtn" class="danger">↻ Reboot device</button></div></section>
-<section class="metrics" id="metrics">
+<section id="app-overview" class="screen hero"><h2>Device overview</h2><div id="overviewWidgets" class="widget-area">
+<section class="metrics" id="metrics" data-widget="metrics">
 <div class="metric"><div class="label">Free heap</div><div class="value" id="heapValue">—</div><div class="hint" id="heapHint">Waiting for telemetry</div></div>
 <div class="metric"><div class="label">CPU load</div><div class="value" id="cpuValue">—</div><div class="hint" id="uptimeHint">Uptime —</div></div>
-<div class="metric"><div class="label">Tasks / processes</div><div class="value" id="taskValue">—</div><div class="hint" id="taskHint">Process table</div></div>
-<div class="metric"><div class="label">Network</div><div class="value" id="networkValue">—</div><div class="hint" id="networkHint">Station interface</div></div>
+<div class="metric"><div class="label">Processes</div><div class="value" id="taskValue">—</div><div class="hint" id="taskHint">Process table</div></div>
+<div class="metric"><div class="label">Wi-Fi station</div><div class="value" id="networkValue">—</div><div class="hint" id="networkHint">Station interface</div></div>
 </section>
-<div class="layout">
-<div class="stack">
-<section class="panel"><div class="panel-head"><h3>System telemetry</h3><span class="pill">5s samples</span></div><canvas id="telemetryChart" class="chart" width="1000" height="230" aria-label="Free heap telemetry chart"></canvas><div class="chart-legend"><span><i class="legend-dot"></i>Free heap (bytes)</span><span id="sampleCount">0 samples</span></div></section>
-<section class="panel"><div class="panel-head"><h3>Processes & tasks</h3><span class="muted small" id="processCount">—</span></div><div class="table-wrap"><table><thead><tr><th>PID</th><th>Name</th><th>State</th><th>Priority</th><th>Stack free</th><th>Actions</th></tr></thead><tbody id="processRows"><tr><td colspan="6" class="muted">Waiting for device…</td></tr></tbody></table></div></section>
-<section class="panel"><div class="panel-head"><h3>Command terminal</h3><span class="pill">UART-style shell over HTTP</span></div><div class="terminal"><div class="terminal-bar"><i></i><i></i><i></i><span style="margin-left:6px">esp32os · remote session</span></div><pre id="terminalOutput">Connected dashboard. Type help to inspect available commands.</pre></div><form class="command" id="commandForm"><input id="commandInput" autocomplete="off" spellcheck="false" placeholder="Enter a shell command, e.g. help"><button class="primary" type="submit">Run command ↗</button></form></section>
-</div>
-<aside class="stack">
-<section class="panel"><div class="panel-head"><h3>Device controls</h3><span class="muted small">Actions</span></div>
-<div class="tabs"><button class="tab active" data-tab="network">Network</button><button class="tab" data-tab="firmware">Firmware</button><button class="tab" data-tab="details">Details</button></div>
-<div id="tab-network" class="tab-view active"><div class="info-list"><div class="info"><span>Wi-Fi state</span><strong id="wifiState">—</strong></div><div class="info"><span>IP address</span><strong id="ipAddress">—</strong></div><div class="info"><span>Gateway</span><strong id="gateway">—</strong></div></div><div class="notice">Network credentials are not displayed in this dashboard.</div></div>
-<div id="tab-firmware" class="tab-view"><div class="info-list"><div class="info"><span>Confirmation</span><strong id="otaConfirmState">—</strong></div><div class="info"><span>Rollback</span><strong id="otaRollbackState">—</strong></div></div><div class="actions" style="margin-top:12px"><button id="confirmBtn" class="primary">Confirm firmware</button><button id="rollbackBtn" class="danger">Rollback</button></div><div class="notice">Only confirm an OTA image after checking the device is operating correctly.</div></div>
-<div id="tab-details" class="tab-view"><div class="info-list"><div class="info"><span>Free heap</span><strong id="detailFree">—</strong></div><div class="info"><span>Total heap</span><strong id="detailTotal">—</strong></div><div class="info"><span>Minimum free</span><strong id="detailMin">—</strong></div><div class="info"><span>Largest block</span><strong id="detailLargest">—</strong></div><div class="info"><span>Uptime</span><strong id="detailUptime">—</strong></div></div></div>
+<section class="panel" data-widget="chart"><div class="panel-head"><h3>Free heap history</h3><span class="small" id="sampleCount">Waiting for samples</span></div><canvas id="telemetryChart" class="chart" width="1000" height="230" aria-label="Free heap telemetry chart"></canvas></section>
+
+<section class="panel" data-widget="shortcuts">
+  <div class="panel-head"><h3>Device apps</h3></div>
+  <div class="widget-shortcuts"><a href="#terminal">Open terminal</a><a href="#processes">View processes</a><a href="#wifi">Manage Wi-Fi</a><a href="#system">System controls</a></div>
 </section>
-<section class="panel"><div class="panel-head"><h3>Device connection</h3><span class="pill">Local network</span></div><p class="muted small">This page is served directly by the ESP32OS web portal. Open the device's IP address in a browser on the same trusted network.</p><button id="refreshSide" style="width:100%">↻ Refresh telemetry</button><div class="notice">The web portal is unauthenticated and can run shell commands and firmware actions. Enable it only on an isolated, trusted development network. Never expose it to the public internet.</div></section>
-</aside>
-</div>
-<div class="footer">ESP32OS · Embedded control panel · No external JavaScript or CDN dependencies</div>
-<div id="settingsOverlay" class="settings-overlay" role="presentation">
- <section class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-  <div class="panel-head"><div><h3 id="settingsTitle">Dashboard preferences</h3><div class="muted small">Personalize this browser view</div></div><button id="closeSettings" aria-label="Close settings">✕</button></div>
+</div></section>
+
+<section id="app-terminal" class="screen" hidden>
+  <h2>Terminal</h2>
+  <div class="panel">
+    <div class="terminal"><pre id="terminalOutput" aria-live="polite">Type help to list commands.</pre></div>
+    <form class="command" id="commandForm">
+      <input id="commandInput" aria-label="Shell command" autocomplete="off" spellcheck="false" placeholder="e.g. uname -a">
+      <button class="primary" type="submit">Run</button>
+    </form>
+  </div>
+</section>
+
+<section id="app-processes" class="screen" hidden>
+  <h2>Processes</h2>
+  <div class="panel">
+    <div class="panel-head"><h3>Managed tasks</h3><span class="small" id="processCount">—</span></div>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Process table">
+      <table><thead><tr><th>PID</th><th>Name</th><th>State</th><th>Priority</th><th>Stack free</th><th>Actions</th></tr></thead><tbody id="processRows"><tr><td colspan="6" class="muted">Waiting for device…</td></tr></tbody></table>
+    </div>
+    <p id="processFeedback" class="small" role="status"></p>
+  </div>
+</section>
+
+<section id="app-wifi" class="screen" hidden>
+  <h2>Wi-Fi</h2>
+  <section class="panel">
+    <div class="panel-head"><h3>Station connection</h3></div>
+    <div class="info"><span>State</span><strong id="wifiState">—</strong></div>
+    <div class="info"><span>Network</span><strong id="wifiNetwork">—</strong></div>
+    <div class="info"><span>IP address</span><strong id="ipAddress">—</strong></div>
+    <div class="info"><span>Gateway</span><strong id="gateway">—</strong></div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h3>Nearby networks</h3><button id="scanWifi">Scan</button></div>
+    <p class="small">Changing networks can interrupt this page. Use a trusted setup network because the portal sends credentials over HTTP.</p>
+    <p id="wifiFeedback" class="small" role="status">Scan to find available networks.</p>
+    <ul id="networkList" aria-label="Nearby Wi-Fi networks"></ul>
+    <form id="wifiForm" hidden>
+      <p>Join <strong id="selectedNetwork"></strong></p>
+      <div class="setting" id="wifiPasswordField">
+        <label for="wifiPassword">Network password</label>
+        <input id="wifiPassword" type="password" autocomplete="new-password" maxlength="64" spellcheck="false">
+      </div>
+      <button id="connectWifi" class="primary" type="submit">Connect</button>
+      <button id="cancelWifi" type="button">Cancel</button>
+    </form>
+  </section>
+</section>
+
+<section id="app-system" class="screen" hidden>
+  <h2>System</h2>
+  <section class="panel">
+    <div class="panel-head"><h3>Memory and uptime</h3></div>
+    <div class="info"><span>Free heap</span><strong id="detailFree">—</strong></div>
+    <div class="info"><span>Total heap</span><strong id="detailTotal">—</strong></div>
+    <div class="info"><span>Minimum free</span><strong id="detailMin">—</strong></div>
+    <div class="info"><span>Largest block</span><strong id="detailLargest">—</strong></div>
+    <div class="info"><span>Uptime</span><strong id="detailUptime">—</strong></div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h3>Firmware controls</h3></div>
+    <div class="info"><span>Confirmation</span><strong id="otaConfirmState">—</strong></div>
+    <div class="info"><span>Rollback</span><strong id="otaRollbackState">—</strong></div>
+    <div class="actions">
+      <button id="confirmBtn" disabled>Confirm firmware</button>
+      <button id="rollbackBtn" class="danger" disabled>Rollback</button>
+      <button id="rebootBtn" class="danger">Reboot device</button>
+    </div>
+    <p id="deviceFeedback" class="small" role="status"></p>
+  </section>
+</section>
+<p class="notice">Unauthenticated control interface. Use on a trusted, isolated network.</p>
+<dialog id="settingsOverlay" class="settings-dialog" aria-labelledby="settingsTitle">
+  <div class="panel-head"><h3 id="settingsTitle">Dashboard settings</h3><button id="closeSettings">Close</button></div>
   <div class="settings-grid">
    <div class="setting"><label for="prefTitle">Dashboard title</label><input id="prefTitle" type="text" maxlength="32" placeholder="Device overview"></div>
    <div class="setting"><label for="prefTheme">Appearance</label><select id="prefTheme"><option value="dark">Dark</option><option value="light">Light</option><option value="system">Use system setting</option></select></div>
@@ -61,17 +249,27 @@ body[data-density=compact] .metric{padding:10px}body[data-density=compact] .pane
    <div class="setting"><label for="prefDensity">Layout density</label><select id="prefDensity"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></div>
    <div class="setting"><label for="prefRefresh">Auto-refresh interval</label><select id="prefRefresh"><option value="3">3 seconds</option><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="30">30 seconds</option><option value="0">Manual only</option></select></div>
   </div>
-  <div class="setting-checks"><label><input id="showMetrics" type="checkbox"> Show metric cards</label><label><input id="showChart" type="checkbox"> Show telemetry chart</label><label><input id="showProcesses" type="checkbox"> Show process table</label><label><input id="showTerminal" type="checkbox"> Show command terminal</label><label><input id="showControls" type="checkbox"> Show device controls</label></div>
-  <p class="settings-help">Preferences are saved locally in this browser. They do not change device firmware, Wi-Fi settings or other users’ dashboards.</p>
+  <h4>Overview widgets</h4>
+  <ul class="widget-order" id="widgetOrder"></ul>
+  <p class="small">Settings apply to this browser.</p>
   <div class="settings-actions"><button id="resetSettings">Reset defaults</button><button id="saveSettings" class="primary">Save preferences</button></div>
- </section>
-</div>
+</dialog>
 </main>
+</div>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
 const state={status:null,processes:[],ota:null,samples:[],busy:false,refreshTimer:null};
-const defaultPrefs={title:'Device overview',theme:'dark',accent:'mint',density:'comfortable',refresh:'5',metrics:true,chart:true,processes:true,terminal:true,controls:true};
+const widgetLabels = {metrics:'Device metrics', chart:'Free heap history', shortcuts:'App shortcuts'};
+const defaultWidgetOrder = Object.keys(widgetLabels);
+const defaultPrefs = {
+ title:'Device overview', theme:'dark', accent:'mint', density:'comfortable', refresh:'5',
+ order:defaultWidgetOrder, metrics:true, chart:true, shortcuts:true
+};
+let draftOrder = [...defaultWidgetOrder];
+let draftVisibility = {};
+let selectedNetwork = null;
+let wifiBusy = false;
 let prefs={...defaultPrefs};
 function readPrefs(){try{const raw=localStorage.getItem('esp32os-dashboard-prefs');if(raw)prefs={...defaultPrefs,...JSON.parse(raw)};}catch(_){prefs={...defaultPrefs};}}
 function applyPrefs(){
@@ -79,33 +277,284 @@ function applyPrefs(){
  const theme=prefs.theme==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):prefs.theme;document.body.dataset.theme=theme;
  const accents={mint:['#63d5c2','#15584f'],blue:['#78a9ff','#244d87'],violet:['#b49aff','#55418c'],amber:['#f5c66a','#70521f']};const a=accents[prefs.accent]||accents.mint;document.documentElement.style.setProperty('--accent',a[0]);document.documentElement.style.setProperty('--accent-soft',a[1]);
  document.body.dataset.density=prefs.density==='compact'?'compact':'comfortable';
- for(const [id,key] of [['metrics','metrics'],['telemetryChart','chart'],['processRows','processes'],['commandForm','terminal'],['tab-network','controls']]){const el=$(id);if(el){const section=el.closest('.panel')||el.closest('.metrics');if(section)section.hidden=!prefs[key];}}
+ for (const key of normalizeWidgetOrder(prefs.order)) {
+  const widget = document.querySelector('[data-widget="' + key + '"]');
+  $('overviewWidgets').append(widget);
+  widget.hidden = prefs[key] === false;
+ }
+ drawChart(state.samples);
  if(state.refreshTimer)clearInterval(state.refreshTimer);const seconds=Number(prefs.refresh)||0;if(seconds>0)state.refreshTimer=setInterval(refresh,seconds*1000);
 }
-function openSettings(){ $('prefTitle').value=prefs.title; $('prefTheme').value=prefs.theme; $('prefAccent').value=prefs.accent; $('prefDensity').value=prefs.density; $('prefRefresh').value=prefs.refresh; for(const k of ['metrics','chart','processes','terminal','controls'])$('show'+k[0].toUpperCase()+k.slice(1)).checked=!!prefs[k]; $('settingsOverlay').classList.add('open'); }
-function closeSettings(){ $('settingsOverlay').classList.remove('open'); }
-function saveSettings(){prefs={title:$('prefTitle').value.trim().slice(0,32)||defaultPrefs.title,theme:$('prefTheme').value,accent:$('prefAccent').value,density:$('prefDensity').value,refresh:$('prefRefresh').value,metrics:$('showMetrics').checked,chart:$('showChart').checked,processes:$('showProcesses').checked,terminal:$('showTerminal').checked,controls:$('showControls').checked};try{localStorage.setItem('esp32os-dashboard-prefs',JSON.stringify(prefs));}catch(_){}applyPrefs();closeSettings();}
+function normalizeWidgetOrder(order) {
+ const known = Array.isArray(order) ? order.filter(key => defaultWidgetOrder.includes(key)) : [];
+ return [...new Set([...known, ...defaultWidgetOrder])];
+}
+function renderWidgetOrder() {
+ const list = $('widgetOrder');
+ list.replaceChildren();
+ draftOrder.forEach((key, index) => {
+  const row = document.createElement('li');
+  const label = document.createElement('label');
+  const check = document.createElement('input');
+  check.type = 'checkbox';
+  check.checked = draftVisibility[key];
+  check.addEventListener('change', () => { draftVisibility[key] = check.checked; });
+  label.append(check, widgetLabels[key]);
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  for (const [step, name] of [[-1, 'Up'], [1, 'Down']]) {
+   const button = document.createElement('button');
+   const next = index + step;
+   button.type = 'button';
+   button.textContent = name;
+   button.setAttribute('aria-label', 'Move ' + widgetLabels[key] + ' ' + name.toLowerCase());
+   button.disabled = next < 0 || next >= draftOrder.length;
+   button.addEventListener('click', () => {
+    [draftOrder[index], draftOrder[next]] = [draftOrder[next], draftOrder[index]];
+    renderWidgetOrder();
+    const nextRow = list.children[next];
+    const sameDirection = nextRow.querySelector('[aria-label="' + button.getAttribute('aria-label') + '"]');
+    (sameDirection.disabled ? nextRow.querySelector('input') : sameDirection).focus();
+   });
+   actions.append(button);
+  }
+  row.append(label, actions);
+  list.append(row);
+ });
+}
+function fillSettings(source) {
+ $('prefTitle').value = source.title;
+ $('prefTheme').value = source.theme;
+ $('prefAccent').value = source.accent;
+ $('prefDensity').value = source.density;
+ $('prefRefresh').value = source.refresh;
+ draftOrder = normalizeWidgetOrder(source.order);
+ draftVisibility = Object.fromEntries(draftOrder.map(key => [key, source[key] !== false]));
+ renderWidgetOrder();
+}
+function openSettings() {
+ fillSettings(prefs);
+ $('settingsOverlay').showModal();
+}
+function closeSettings() { $('settingsOverlay').close(); }
+function saveSettings() {
+ prefs = {
+  title: $('prefTitle').value.trim().slice(0, 32) || defaultPrefs.title,
+  theme: $('prefTheme').value, accent: $('prefAccent').value,
+  density: $('prefDensity').value, refresh: $('prefRefresh').value,
+  order: [...draftOrder], ...draftVisibility
+ };
+ try { localStorage.setItem('esp32os-dashboard-prefs', JSON.stringify(prefs)); } catch (_) {}
+ applyPrefs();
+ closeSettings();
+}
+
+function showApp() {
+ const links = Array.from(document.querySelectorAll('[data-app]'));
+ const requested = location.hash.slice(1);
+ const app = links.some(link => link.dataset.app === requested) ? requested : 'overview';
+ for (const link of links) {
+  const current = link.dataset.app === app;
+  $('app-' + link.dataset.app).hidden = !current;
+  if (current) link.setAttribute('aria-current', 'page');
+  else link.removeAttribute('aria-current');
+ }
+ if (app === 'overview') drawChart(state.samples);
+ if (app !== 'wifi' && !wifiBusy) clearNetworkSelection();
+}
+
+function clearNetworkSelection() {
+ selectedNetwork = null;
+ $('wifiPassword').value = '';
+ $('wifiForm').hidden = true;
+ for (const row of $('networkList').querySelectorAll('button')) row.setAttribute('aria-pressed', 'false');
+}
+
+function chooseNetwork(network, name, button) {
+ if (wifiBusy) return;
+ clearNetworkSelection();
+ selectedNetwork = network;
+ button.setAttribute('aria-pressed', 'true');
+ setText('selectedNetwork', name);
+ $('wifiPasswordField').hidden = network.open;
+ $('wifiPassword').required = !network.open;
+ $('wifiForm').hidden = false;
+ $(network.open ? 'connectWifi' : 'wifiPassword').focus();
+}
+
+function ssidBytes(hex) {
+ return Uint8Array.from(hex.match(/../g), byte => parseInt(byte, 16));
+}
+
+function setWifiBusy(busy) {
+ wifiBusy = busy;
+ $('scanWifi').disabled = busy;
+ $('connectWifi').disabled = busy;
+ $('cancelWifi').disabled = busy;
+ for (const row of $('networkList').querySelectorAll('button')) row.disabled = busy;
+}
+
+async function scanWifi() {
+ if (wifiBusy) return;
+ clearNetworkSelection();
+ $('networkList').replaceChildren();
+ setWifiBusy(true);
+ setText('wifiFeedback', 'Scanning…');
+ try {
+  const results = await getJson('/api/wifi/scan');
+  const seen = new Set();
+  const decoder = new TextDecoder();
+  for (const network of results.sort((a, b) => b.rssi - a.rssi)) {
+   if (!/^(?:[a-f0-9]{2}){1,32}$/i.test(network.ssid_hex)) continue;
+   const key = network.ssid_hex + ':' + network.open;
+   if (seen.has(key)) continue;
+   seen.add(key);
+   const name = decoder.decode(ssidBytes(network.ssid_hex));
+   const item = document.createElement('li');
+   const button = document.createElement('button');
+   button.type = 'button';
+   button.setAttribute('aria-pressed', 'false');
+   const label = document.createElement('span');
+   label.textContent = name;
+   const details = document.createElement('span');
+   details.className = 'small';
+   details.textContent = (network.open ? 'Open' : 'Secured') + ' · ' + network.rssi + ' dBm';
+   button.append(label, details);
+   button.addEventListener('click', () => chooseNetwork(network, name, button));
+   item.append(button);
+   $('networkList').append(item);
+  }
+  setText('wifiFeedback', seen.size ? 'Select a network to join.' : 'No named networks found.');
+ } catch (error) {
+  setText('wifiFeedback', 'Scan failed. Try again.');
+ } finally {
+  setWifiBusy(false);
+ }
+}
+
+async function connectWifi(event) {
+ event.preventDefault();
+ if (!selectedNetwork || wifiBusy) return;
+ const ssid = ssidBytes(selectedNetwork.ssid_hex);
+ const password = new TextEncoder().encode(selectedNetwork.open ? '' : $('wifiPassword').value);
+ if (!selectedNetwork.open && (password.length < 8 || password.length > 64)) {
+  setText('wifiFeedback', 'Enter a password of 8 to 64 bytes.');
+  return;
+ }
+ const body = new Uint8Array(1 + ssid.length + password.length);
+ body[0] = ssid.length;
+ body.set(ssid, 1);
+ body.set(password, 1 + ssid.length);
+ $('wifiPassword').value = '';
+ setWifiBusy(true);
+ setText('wifiFeedback', 'Connecting…');
+ try {
+  const response = await fetch('/api/wifi/connect', {
+   method:'POST', headers:{'Content-Type':'application/octet-stream'}, body
+  });
+  const message = await response.text();
+  if (!response.ok) {
+   setText('wifiFeedback', message);
+   return;
+  }
+  clearNetworkSelection();
+  setText('wifiFeedback', message);
+ } catch (error) {
+  setText('wifiFeedback', 'The board may have moved to a new network. Check its station IP over UART with wifi status.');
+ } finally {
+  setWifiBusy(false);
+  refresh();
+ }
+}
 function setText(id,value){$(id).textContent=value===undefined||value===null?'—':String(value);}
 async function getJson(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error(path+' returned HTTP '+r.status);return r.json();}
 async function postText(path,body=''){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'text/plain'},body,cache:'no-store'});const t=await r.text();if(!r.ok)throw new Error(t||('HTTP '+r.status));return t;}
 function bytes(n){n=Number(n)||0;const u=['B','KB','MB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++;}return n.toFixed(i?1:0)+' '+u[i];}
 function uptime(s){s=Number(s)||0;const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d+'d '+h+'h '+m+'m';}
-function renderStatus(s,o){state.status=s;state.ota=o;setText('heapValue',bytes(s.free_heap));setText('heapHint','of '+bytes(s.total_heap)+' total · min '+bytes(s.min_free_heap));setText('cpuValue',(s.cpu_load_pct||0)+'%');setText('uptimeHint','Uptime '+uptime(s.uptime_s));setText('taskValue',s.procs);setText('taskHint','Managed processes');setText('networkValue',s.net&&s.net.connected?'Online':'Offline');setText('networkHint',s.net&&s.net.ip?s.net.ip:'No station IP');setText('wifiState',s.net&&s.net.connected?'Connected':'Disconnected');setText('ipAddress',s.net&&s.net.ip||'—');setText('gateway',s.net&&s.net.gw||'Not reported');setText('detailFree',bytes(s.free_heap));setText('detailTotal',bytes(s.total_heap));setText('detailMin',bytes(s.min_free_heap));setText('detailLargest',bytes(s.largest_free_block));setText('detailUptime',uptime(s.uptime_s));setText('otaConfirmState',o.needs_confirmation?'Pending':'Not required');setText('otaRollbackState',o.can_rollback?'Available':'Unavailable');$('confirmBtn').disabled=!o.needs_confirmation;$('rollbackBtn').disabled=!o.can_rollback;}
-function renderProcesses(items){state.processes=items;setText('processCount',items.length+' entries');const body=$('processRows');body.replaceChildren();if(!items.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.className='muted';td.textContent='No process data reported';tr.append(td);body.append(tr);return;}for(const p of items){const tr=document.createElement('tr');for(const val of [p.pid,p.name,p.state,p.priority,p.stack_high_water]){const td=document.createElement('td');td.textContent=String(val);if(val===p.state){const span=document.createElement('span');span.className='state';span.textContent=String(val);td.replaceChildren(span);}tr.append(td);}const td=document.createElement('td'),actions=document.createElement('div');actions.className='row-actions';for(const [action,label] of [['suspend','Pause'],['resume','Resume'],['kill','Stop']]){const b=document.createElement('button');b.textContent=label;if(action==='kill')b.className='danger';b.addEventListener('click',()=>processAction(p.pid,action));actions.append(b);}td.append(actions);tr.append(td);body.append(tr);}}
-function drawChart(samples){const c=$('telemetryChart'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);ctx.strokeStyle='#26364d';ctx.lineWidth=1;for(let i=0;i<4;i++){const y=18+i*(h-38)/3;ctx.beginPath();ctx.moveTo(55,y);ctx.lineTo(w-12,y);ctx.stroke();}if(!samples.length){ctx.fillStyle='#8da1b9';ctx.fillText('Waiting for telemetry samples…',65,35);return;}const vals=samples.map(x=>Number(x.free_heap)||0),min=Math.min(...vals),max=Math.max(...vals),span=max-min||1;ctx.strokeStyle='#63d5c2';ctx.lineWidth=3;ctx.beginPath();vals.forEach((v,i)=>{const x=55+i*(w-75)/Math.max(vals.length-1,1),y=h-20-(v-min)/span*(h-45);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();ctx.fillStyle='#8da1b9';ctx.font='12px system-ui';ctx.fillText(bytes(max),6,20);ctx.fillText(bytes(min),6,h-7);setText('sampleCount',samples.length+' samples');}
-async function refresh(){if(state.busy)return;try{const [s,p,o,t]=await Promise.all([getJson('/api/status'),getJson('/api/processes'),getJson('/api/ota'),getJson('/api/telemetry/history')]);renderStatus(s,o);renderProcesses(p);state.samples=t.samples||[];drawChart(state.samples);$('connDot').className='dot online';setText('connection','Device connected · updated '+new Date().toLocaleTimeString());}catch(e){$('connDot').className='dot offline';setText('connection','Device unavailable · '+e.message);}}
-async function processAction(pid,action){if(action==='kill'&&!confirm('Stop process '+pid+'?'))return;try{const r=await postText('/api/process/action','pid='+encodeURIComponent(pid)+'&action='+encodeURIComponent(action));setText('terminalOutput',r);await refresh();}catch(e){setText('terminalOutput','Error: '+e.message);}}
+function renderStatus(s,o){state.status=s;state.ota=o;setText('heapValue',bytes(s.free_heap));setText('heapHint','of '+bytes(s.total_heap)+' total · min '+bytes(s.min_free_heap));setText('cpuValue',(s.cpu_load_pct||0)+'%');setText('uptimeHint','Uptime '+uptime(s.uptime_s));setText('taskValue',s.procs);setText('taskHint','Managed processes');setText('networkValue',s.net&&s.net.connected?'Online':'Offline');setText('networkHint',s.net&&s.net.ip?s.net.ip:'No station IP');setText('wifiState',s.net&&s.net.connected?'Connected':'Disconnected');setText('wifiNetwork',s.net?.connected&&s.net.ssid_hex ? new TextDecoder().decode(ssidBytes(s.net.ssid_hex)) : '—');setText('ipAddress',s.net&&s.net.ip||'—');setText('gateway',s.net&&s.net.gw||'Not reported');setText('detailFree',bytes(s.free_heap));setText('detailTotal',bytes(s.total_heap));setText('detailMin',bytes(s.min_free_heap));setText('detailLargest',bytes(s.largest_free_block));setText('detailUptime',uptime(s.uptime_s));setText('otaConfirmState',o.needs_confirmation?'Pending':'Not required');setText('otaRollbackState',o.can_rollback?'Available':'Unavailable');$('confirmBtn').disabled=!o.needs_confirmation;$('rollbackBtn').disabled=!o.can_rollback;}
+function renderProcesses(items){state.processes=items;setText('processCount',items.length+(items.length===1?' process':' processes'));const body=$('processRows');body.replaceChildren();if(!items.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.className='muted';td.textContent='No process data reported';tr.append(td);body.append(tr);return;}for(const p of items){const tr=document.createElement('tr');for(const val of [p.pid,p.name,p.state,p.priority,p.stack_high_water]){const td=document.createElement('td');td.textContent=String(val);if(val===p.state){const span=document.createElement('span');span.className='state';span.textContent=String(val);td.replaceChildren(span);}tr.append(td);}const td=document.createElement('td'),actions=document.createElement('div');actions.className='row-actions';for(const [action,label] of [['suspend','Pause'],['resume','Resume'],['kill','Stop']]){const b=document.createElement('button');b.textContent=label;if(action==='kill')b.className='danger';b.addEventListener('click',()=>processAction(p.pid,action));actions.append(b);}td.append(actions);tr.append(td);body.append(tr);}}
+function drawChart(samples) {
+ const canvas = $('telemetryChart');
+ const width = canvas.clientWidth;
+ if (!width) return;
+
+ const height = canvas.clientHeight;
+ const scale = window.devicePixelRatio || 1;
+ canvas.width = Math.round(width * scale);
+ canvas.height = Math.round(height * scale);
+ const ctx = canvas.getContext('2d');
+ ctx.scale(scale, scale);
+ ctx.font = '12px system-ui';
+ const styles = getComputedStyle(document.body);
+ const color = name => styles.getPropertyValue(name).trim();
+ ctx.fillStyle = color('--muted');
+
+ if (!samples.length) {
+  setText('sampleCount', 'Waiting for samples');
+  return;
+ }
+
+ const values = samples.map(sample => Number(sample.free_heap) || 0);
+ const min = Math.min(...values);
+ const max = Math.max(...values);
+ const maxLabel = bytes(max);
+ const minLabel = bytes(min);
+ const left = Math.ceil(Math.max(ctx.measureText(maxLabel).width, ctx.measureText(minLabel).width)) + 12;
+ const right = width - 4;
+ const top = 16;
+ const bottom = height - 16;
+
+ ctx.strokeStyle = color('--line');
+ for (let i = 0; i < 4; i++) {
+  const y = top + i * (bottom - top) / 3;
+  ctx.beginPath();
+  ctx.moveTo(left, y);
+  ctx.lineTo(right, y);
+  ctx.stroke();
+ }
+
+ ctx.strokeStyle = color(document.body.dataset.theme === 'light' ? '--accent-soft' : '--accent');
+ ctx.lineWidth = 2;
+ ctx.beginPath();
+ values.forEach((value, i) => {
+  const x = left + (right - left) * i / Math.max(values.length - 1, 1);
+  const y = min === max ? (top + bottom) / 2 : bottom - (bottom - top) * (value - min) / (max - min);
+  if (i === 0) ctx.moveTo(x, y);
+  else ctx.lineTo(x, y);
+  if (values.length === 1) {
+   ctx.arc(x + 2, y, 2, Math.PI, 3 * Math.PI);
+  }
+ });
+ ctx.stroke();
+
+ if (min === max) {
+  ctx.fillText(maxLabel, 0, (top + bottom) / 2 + 4);
+ } else {
+  ctx.fillText(maxLabel, 0, top + 4);
+  ctx.fillText(minLabel, 0, bottom + 4);
+ }
+ setText('sampleCount', samples.length + (samples.length === 1 ? ' sample' : ' samples') + ' · 5 s interval');
+}
+async function refresh(){if(state.busy||wifiBusy)return;try{const [s,p,o,t]=await Promise.all([getJson('/api/status'),getJson('/api/processes'),getJson('/api/ota'),getJson('/api/telemetry/history')]);renderStatus(s,o);renderProcesses(p);state.samples=t.samples||[];drawChart(state.samples);$('connDot').className='dot online';if (!$('connection').textContent.startsWith('Device connected')) setText('connection','Device connected');}catch(e){$('connDot').className='dot offline';setText('connection','Device unavailable · '+e.message);}}
+async function processAction(pid,action){if(action==='kill'&&!confirm('Stop process '+pid+'?'))return;try{const r=await postText('/api/process/action','pid='+encodeURIComponent(pid)+'&action='+encodeURIComponent(action));setText('processFeedback',r);await refresh();}catch(e){setText('processFeedback','Error: '+e.message);}}
 $('commandForm').addEventListener('submit',async e=>{e.preventDefault();const cmd=$('commandInput').value.trim();if(!cmd)return;state.busy=true;try{const out=await postText('/api/command',cmd);setText('terminalOutput','esp32os> '+cmd+'\n'+out);$('commandInput').value='';}catch(err){setText('terminalOutput','Command failed: '+err.message);}finally{state.busy=false;refresh();}});
-async function deviceAction(path,message,confirmText){if(confirmText&&!confirm(confirmText))return;try{setText('terminalOutput',await postText(path));if(message)alert(message);await refresh();}catch(e){setText('terminalOutput','Action failed: '+e.message);}}
+async function deviceAction(path,message,confirmText){if(confirmText&&!confirm(confirmText))return;try{setText('deviceFeedback',await postText(path));if(message)alert(message);await refresh();}catch(e){setText('deviceFeedback','Action failed: '+e.message);}}
 $('rebootBtn').addEventListener('click',()=>deviceAction('/api/system/reboot','Device is rebooting.','Reboot the ESP32 device now?'));
 $('confirmBtn').addEventListener('click',()=>deviceAction('/api/ota/confirm','Firmware confirmed.','Confirm this firmware image?'));
 $('rollbackBtn').addEventListener('click',()=>deviceAction('/api/ota/rollback','Rollback requested.','Roll back to the previous firmware? The device will restart.'));
-$('refreshBtn').addEventListener('click',refresh);$('refreshSide').addEventListener('click',refresh);
-document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.tab-view').forEach(x=>x.classList.toggle('active',x.id==='tab-'+b.dataset.tab));}));
+$('refreshBtn').addEventListener('click',refresh);
 $('settingsBtn').addEventListener('click',openSettings);$('closeSettings').addEventListener('click',closeSettings);$('saveSettings').addEventListener('click',saveSettings);
-$('resetSettings').addEventListener('click',()=>{prefs={...defaultPrefs};applyPrefs();openSettings();});
+$('resetSettings').addEventListener('click',()=>fillSettings(defaultPrefs));
 $('settingsOverlay').addEventListener('click',e=>{if(e.target===$('settingsOverlay'))closeSettings();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSettings();});
-readPrefs();applyPrefs();refresh();
+
+window.addEventListener('resize',()=>drawChart(state.samples));
+$('scanWifi').addEventListener('click', scanWifi);
+$('wifiForm').addEventListener('submit', connectWifi);
+$('cancelWifi').addEventListener('click', clearNetworkSelection);
+window.addEventListener('hashchange', showApp);
+readPrefs();
+applyPrefs();
+showApp();
+refresh();
 </script>
 </body></html>
